@@ -1,5 +1,6 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
+require("@nomiclabs/hardhat-etherscan");
 
 // Replace file reading with environment variable
 const privateKey = process.env.WALLET_PRIVATE_KEY;

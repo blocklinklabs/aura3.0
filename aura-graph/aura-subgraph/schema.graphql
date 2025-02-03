@@ -17,3 +17,20 @@ type InterventionLogged @entity(immutable: true) {
   blockTimestamp: BigInt!
   transactionHash: Bytes!
 }
+
+type UserConsent @entity {
+  id: Bytes! # user address
+  aiInterventions: Boolean!
+  emergencyContact: Boolean!
+  dataSharing: Boolean!
+  lastUpdated: BigInt!
+  auditLogs: [AuditLog!]! @derivedFrom(field: "user")
+}
+
+type AuditLog @entity {
+  id: Bytes!
+  user: UserConsent!
+  interventionType: String!
+  timestamp: BigInt!
+  outcome: String!
+}
