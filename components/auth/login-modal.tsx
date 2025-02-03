@@ -18,28 +18,44 @@ import { useLocalStorage } from "@/lib/hooks/use-local-storage";
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onLoginSuccess: () => void;
 }
 
-export function LoginModal({ isOpen, onClose }: LoginModalProps) {
+export function LoginModal({
+  isOpen,
+  onClose,
+  onLoginSuccess,
+}: LoginModalProps) {
   const { login } = usePrivy();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [, setHasVisited] = useLocalStorage("has_visited", false);
 
   const handleLogin = async () => {
+    if (!name.trim() || !email.trim()) return;
+
     try {
       setIsLoading(true);
-      await fetch("/api/users", {
+
+      // Create user first
+      const userResponse = await fetch("/api/users", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email }),
       });
 
-      setHasVisited(true);
+      if (!userResponse.ok) throw new Error("Failed to create user");
+      const { user } = await userResponse.json();
+
+      // Create server wallet
+      // await fetch("/api/wallet", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ userId: user.id }),
+      // });
+
       await login();
+      onLoginSuccess();
       onClose();
     } catch (error) {
       console.error("Login error:", error);

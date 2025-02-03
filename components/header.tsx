@@ -21,7 +21,7 @@ export function Header() {
   const { isAuthenticated, user, login, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [hasVisited] = useLocalStorage("has_visited", false);
+  const [hasVisited, setHasVisited] = useLocalStorage("has_visited", false);
 
   const navItems = [
     { href: "#features", label: "Features" },
@@ -148,6 +148,7 @@ export function Header() {
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
+        onLoginSuccess={() => setHasVisited(true)}
       />
     </div>
   );

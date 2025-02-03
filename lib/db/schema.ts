@@ -14,6 +14,8 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
+  walletId: text("wallet_id"),
+  walletAddress: text("wallet_address"),
   encryptedData: jsonb("encrypted_data"), // Encrypted personal/health data
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
