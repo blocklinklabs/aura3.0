@@ -1,0 +1,29 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Contract
+    network: mainnet
+    source:
+      address: "0x92EECac0a67372fB4420FB61aAd28b77B335A790"
+      abi: Contract
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ConsentUpdated
+        - InterventionLogged
+      abis:
+        - name: Contract
+          file: ./abis/Contract.json
+      eventHandlers:
+        - event: ConsentUpdated(indexed address,string,bool)
+          handler: handleConsentUpdated
+        - event: InterventionLogged(indexed address,string,string)
+          handler: handleInterventionLogged
+      file: ./src/contract.ts

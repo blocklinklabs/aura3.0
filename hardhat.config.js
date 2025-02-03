@@ -1,6 +1,9 @@
 require("@nomicfoundation/hardhat-toolbox");
-const fs = require("fs");
-const privateKey = fs.readFileSync("secrete.txt").toString();
+require("dotenv").config();
+
+// Replace file reading with environment variable
+const privateKey = process.env.WALLET_PRIVATE_KEY;
+
 /** @type import('hardhat/config').HardhatUserConfig */
 // npx hardhat ignition deploy ./ignition/modules/TherapyConsent.js --network emvOnFlow
 module.exports = {
