@@ -1,0 +1,122 @@
+import {
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  boolean,
+  jsonb,
+  uuid,
+  integer,
+} from "drizzle-orm/pg-core";
+
+// Users table
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").unique().notNull(),
+  name: text("name").notNull(),
+  encryptedData: jsonb("encrypted_data"), // Encrypted personal/health data
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Therapy sessions
+export const therapySessions = pgTable("therapy_sessions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id),
+  scheduledTime: timestamp("scheduled_time").notNull(),
+  status: text("status").notNull(), // scheduled, completed, cancelled
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// IoT device settings
+export const deviceSettings = pgTable("device_settings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id),
+  deviceType: text("device_type").notNull(), // philips_hue, alexa, etc.
+  settings: jsonb("settings").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Health metrics
+export const healthMetrics = pgTable("health_metrics", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id),
+  metricType: text("metric_type").notNull(), // heart_rate, stress_level, etc.
+  value: jsonb("value").notNull(),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
+// User preferences
+export const userPreferences = pgTable("user_preferences", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .references(() => users.id)
+    .unique(),
+  notifications: boolean("notifications").default(true),
+  aiInterventions: boolean("ai_interventions").default(true),
+  preferences: jsonb("preferences").default({}),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// AI Chat History
+export const chatHistory = pgTable("chat_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id),
+  message: text("message").notNull(),
+  role: text("role").notNull(), // 'user' or 'assistant'
+  timestamp: timestamp("timestamp").defaultNow(),
+  sentiment: text("sentiment"), // Optional sentiment analysis
+  context: jsonb("context"), // Store any relevant context
+});
+
+// Wearable Devices
+export const wearableDevices = pgTable("wearable_devices", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id),
+  deviceType: text("device_type").notNull(), // 'fitbit', 'apple_watch', etc.
+  deviceId: text("device_id").notNull(),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  lastSynced: timestamp("last_synced"),
+  settings: jsonb("settings"),
+});
+
+// Health Metrics from Wearables
+export const wearableMetrics = pgTable("wearable_metrics", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id),
+  deviceId: uuid("device_id").references(() => wearableDevices.id),
+  metricType: text("metric_type").notNull(), // heart_rate, steps, sleep, etc.
+  value: jsonb("value").notNull(),
+  timestamp: timestamp("timestamp").defaultNow(),
+  source: text("source").notNull(), // 'fitbit', 'manual', etc.
+});
+
+// Activities and Tasks
+export const activities = pgTable("activities", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").references(() => users.id),
+  sessionId: uuid("session_id").references(() => therapySessions.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull(), // meditation, exercise, journaling, etc.
+  status: text("status").notNull(), // pending, completed, skipped
+  scheduledFor: timestamp("scheduled_for"),
+  completedAt: timestamp("completed_at"),
+  duration: integer("duration"), // in minutes
+  recurrence: jsonb("recurrence"), // for recurring activities
+  metadata: jsonb("metadata"), // additional activity-specific data
+});
+
+// Activity Progress
+export const activityProgress = pgTable("activity_progress", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  activityId: uuid("activity_id").references(() => activities.id),
+  userId: uuid("user_id").references(() => users.id),
+  status: text("status").notNull(), // in_progress, completed, paused
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  notes: text("notes"),
+  metrics: jsonb("metrics"), // any relevant metrics
+});

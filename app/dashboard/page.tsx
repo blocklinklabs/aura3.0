@@ -50,6 +50,10 @@ import { MoodForm } from "@/components/mood/mood-form";
 import { AnxietyGames } from "@/components/games/anxiety-games";
 import { ExpandableChat } from "@/components/chat/expandable-chat";
 import { MoodTracker } from "@/components/mood/mood-tracker";
+import { FitbitConnect } from "@/components/wearables/fitbit-connect";
+import { ActivityList } from "@/components/activities/activity-list";
+import { ChatHistory } from "@/components/chat/chat-history";
+import { getTodaysActivities, updateActivityStatus } from "@/lib/db/actions";
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
@@ -145,13 +149,18 @@ export default function Dashboard() {
     },
   });
 
-  // Wearable data
+  // New states for activities and wearables
+  const [activities, setActivities] = useState([]);
+  const [wearableConnected, setWearableConnected] = useState(false);
   const [healthMetrics, setHealthMetrics] = useState({
-    heartRate: 72,
-    steps: 8432,
-    sleepHours: 7.5,
-    stressLevel: "medium",
+    heartRate: null,
+    steps: null,
+    sleep: null,
+    lastSynced: null,
   });
+
+  // Also add userId for the function call
+  const userId = "current-user-id"; // Replace this with actual user ID from your auth system
 
   useEffect(() => {
     setMounted(true);
@@ -214,6 +223,27 @@ export default function Dashboard() {
       bgColor: "bg-yellow-500/10",
     },
   ];
+
+  // Fetch activities and health metrics
+  useEffect(() => {
+    if (mounted) {
+      fetchTodaysActivities();
+      fetchHealthMetrics();
+    }
+  }, [mounted]);
+
+  const fetchTodaysActivities = async () => {
+    const response = await getTodaysActivities(userId);
+    setActivities(response);
+  };
+
+  const fetchHealthMetrics = async () => {
+    if (wearableConnected) {
+      // Fetch latest metrics from Fitbit
+      const metrics = await getLatestHealthMetrics(userId);
+      setHealthMetrics(metrics);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -315,6 +345,82 @@ export default function Dashboard() {
 
         {/* Anxiety Games */}
         <AnxietyGames />
+
+        {/* Wearable Connection Status */}
+        {!wearableConnected && (
+          <Card className="border-primary/10">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="font-semibold">Connect Your Fitbit</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Track your health metrics automatically
+                  </p>
+                </div>
+                <FitbitConnect onConnect={() => setWearableConnected(true)} />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Activities Section */}
+        <Card className="border-primary/10">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Today's Activities
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ActivityList
+              activities={activities}
+              onStatusUpdate={async (activityId, status) => {
+                await updateActivityStatus({
+                  activityId,
+                  status,
+                  completedAt: status === "completed" ? new Date() : undefined,
+                });
+                fetchTodaysActivities();
+              }}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Update the health metrics card with real data */}
+        <Card className="border-primary/10">
+          <CardHeader>
+            <CardTitle className="text-xl font-semibold flex items-center gap-2">
+              <Activity className="h-5 w-5 text-primary" />
+              Health Metrics
+              {healthMetrics.lastSynced && (
+                <span className="text-sm text-muted-foreground">
+                  Last synced:{" "}
+                  {new Date(healthMetrics.lastSynced).toLocaleTimeString()}
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              {healthMetrics.heartRate && (
+                <div className="p-3 rounded-lg bg-primary/5">
+                  <p className="text-sm text-muted-foreground">Heart Rate</p>
+                  <p className="text-2xl font-bold">
+                    {healthMetrics.heartRate}
+                  </p>
+                  <p className="text-xs text-muted-foreground">BPM</p>
+                </div>
+              )}
+              {healthMetrics.steps && (
+                <div className="p-3 rounded-lg bg-primary/5">
+                  <p className="text-sm text-muted-foreground">Steps</p>
+                  <p className="text-2xl font-bold">{healthMetrics.steps}</p>
+                  <p className="text-xs text-muted-foreground">Today</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Enhanced Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -450,38 +556,6 @@ export default function Dashboard() {
                       </Button>
                     </div>
                   ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Wearable Integration */}
-            <Card className="border-primary/10">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-primary" />
-                  Health Metrics
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 rounded-lg bg-primary/5">
-                      <p className="text-sm text-muted-foreground">
-                        Heart Rate
-                      </p>
-                      <p className="text-2xl font-bold">
-                        {healthMetrics.heartRate}
-                      </p>
-                      <p className="text-xs text-muted-foreground">BPM</p>
-                    </div>
-                    <div className="p-3 rounded-lg bg-primary/5">
-                      <p className="text-sm text-muted-foreground">Steps</p>
-                      <p className="text-2xl font-bold">
-                        {healthMetrics.steps}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Today</p>
-                    </div>
-                  </div>
                 </div>
               </CardContent>
             </Card>
