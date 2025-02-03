@@ -12,8 +12,8 @@ import {
 // Users table
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").unique().notNull(),
   name: text("name").notNull(),
+  email: text("email").notNull().unique(),
   encryptedData: jsonb("encrypted_data"), // Encrypted personal/health data
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -24,9 +24,14 @@ export const therapySessions = pgTable("therapy_sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").references(() => users.id),
   scheduledTime: timestamp("scheduled_time").notNull(),
-  status: text("status").notNull(), // scheduled, completed, cancelled
+  status: text("status").notNull(), // scheduled, completed, cancelled, in_progress
+  type: text("type").notNull(), // video, audio, text, in-person
   notes: text("notes"),
+  summary: text("summary"), // Session summary
+  aiRecommendations: jsonb("ai_recommendations"), // AI-generated recommendations
+  mood: text("mood"), // User's mood during session
   createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
 });
 
 // IoT device settings

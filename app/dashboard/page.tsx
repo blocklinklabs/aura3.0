@@ -29,6 +29,8 @@ import {
   Music,
   Lamp,
   BrainCircuit,
+  ArrowRight,
+  X,
 } from "lucide-react";
 import {
   Card,
@@ -41,6 +43,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Container } from "@/components/ui/container";
+import { cn } from "@/lib/utils";
 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -53,11 +56,84 @@ import { MoodTracker } from "@/components/mood/mood-tracker";
 import { FitbitConnect } from "@/components/wearables/fitbit-connect";
 import { ActivityList } from "@/components/activities/activity-list";
 import { ChatHistory } from "@/components/chat/chat-history";
-import { getTodaysActivities, updateActivityStatus } from "@/lib/db/actions";
+import {
+  getTodaysActivities,
+  updateActivityStatus,
+  getLatestHealthMetrics,
+} from "@/lib/db/actions";
+import { StartSessionModal } from "@/components/therapy/start-session-modal";
+import { SessionHistory } from "@/components/therapy/session-history";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { addDays, format, subDays } from "date-fns";
+import { useAuth } from "@/lib/context/auth-context";
+
+// Add this type definition
+type ActivityLevel = "none" | "low" | "medium" | "high";
+
+interface DayActivity {
+  date: Date;
+  level: ActivityLevel;
+  activities: {
+    type: string;
+    name: string;
+    completed: boolean;
+    time?: string;
+  }[];
+}
+
+// Add this component for the contribution graph
+const ContributionGraph = ({ data }: { data: DayActivity[] }) => {
+  const getLevelColor = (level: ActivityLevel) => {
+    switch (level) {
+      case "high":
+        return "bg-primary hover:bg-primary/90";
+      case "medium":
+        return "bg-primary/60 hover:bg-primary/70";
+      case "low":
+        return "bg-primary/30 hover:bg-primary/40";
+      default:
+        return "bg-muted hover:bg-muted/80";
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-7 gap-2">
+        {data.map((day, i) => (
+          <div key={i} className="group relative">
+            <div
+              className={cn(
+                "w-full aspect-square rounded-sm cursor-pointer transition-colors",
+                getLevelColor(day.level)
+              )}
+            />
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 hidden group-hover:block">
+              <div className="bg-popover text-popover-foreground text-xs rounded-md px-2 py-1 whitespace-nowrap shadow-md">
+                <p className="font-medium">{format(day.date, "MMM d, yyyy")}</p>
+                <p>{day.activities.length} activities</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export default function Dashboard() {
+  const { isLoading, user } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   // New states for crisis management and interventions
   const [riskLevel, setRiskLevel] = useState<"low" | "medium" | "high">("low");
@@ -135,20 +211,6 @@ export default function Dashboard() {
     },
   ]);
 
-  const [smartEnvironment, setSmartEnvironment] = useState({
-    lights: {
-      brightness: 80,
-      color: "warm",
-      isOn: true,
-    },
-    temperature: 72,
-    music: {
-      isPlaying: false,
-      volume: 40,
-      playlist: "Calm Focus",
-    },
-  });
-
   // New states for activities and wearables
   const [activities, setActivities] = useState([]);
   const [wearableConnected, setWearableConnected] = useState(false);
@@ -162,11 +224,58 @@ export default function Dashboard() {
   // Also add userId for the function call
   const userId = "current-user-id"; // Replace this with actual user ID from your auth system
 
+  // New states for mood tracking
+  const [showMoodModal, setShowMoodModal] = useState(false);
+  const [showCheckInChat, setShowCheckInChat] = useState(false);
+
+  // In your Dashboard component, add this state
+  const [activityHistory, setActivityHistory] = useState<DayActivity[]>(() => {
+    // Generate sample data for the last 28 days
+    return Array.from({ length: 28 }, (_, i) => ({
+      date: subDays(new Date(), 27 - i),
+      level: ["none", "low", "medium", "high"][
+        Math.floor(Math.random() * 4)
+      ] as ActivityLevel,
+      activities: Array.from(
+        { length: Math.floor(Math.random() * 5) },
+        (_, j) => ({
+          type: ["meditation", "exercise", "therapy", "journaling"][
+            Math.floor(Math.random() * 4)
+          ],
+          name: [
+            "Morning Meditation",
+            "Evening Walk",
+            "Therapy Session",
+            "Daily Journal",
+          ][Math.floor(Math.random() * 4)],
+          completed: Math.random() > 0.3,
+          time: format(addDays(new Date(), j), "h:mm a"),
+        })
+      ),
+    }));
+  });
+
   useEffect(() => {
     setMounted(true);
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    // Check if we have a hash in the URL (contains access token after auth)
+    if (window.location.hash) {
+      const params = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = params.get("access_token");
+      if (accessToken) {
+        // Store the token securely
+        localStorage.setItem("fitbit_token", accessToken);
+        // Clear the URL
+        router.replace("/dashboard");
+        // Update state to show connected
+        setWearableConnected(true);
+      }
+    }
+  }, [router]);
 
   const moodHistory = [
     { day: "Mon", value: 65 },
@@ -245,10 +354,70 @@ export default function Dashboard() {
     }
   };
 
+  // Add these action handlers
+  const handleStartTherapy = () => {
+    router.push("/therapy/new");
+  };
+
+  const handleMoodEntry = () => {
+    // You can either use a modal or redirect to a mood entry page
+    setShowMoodModal(true);
+  };
+
+  const handleAICheckIn = () => {
+    // This could open the chat with a specific AI check-in flow
+    setShowCheckInChat(true);
+  };
+
+  // Function to fetch Fitbit data
+  const fetchFitbitData = async () => {
+    const token = localStorage.getItem("fitbit_token");
+    if (!token) return;
+
+    try {
+      const response = await fetch(
+        "https://api.fitbit.com/1/user/-/profile.json",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        // Handle the data
+        console.log(data);
+      } else {
+        // Handle error or token expiration
+        setWearableConnected(false);
+        localStorage.removeItem("fitbit_token");
+      }
+    } catch (error) {
+      console.error("Failed to fetch Fitbit data:", error);
+    }
+  };
+
+  // Use the fetchFitbitData function when needed
+  useEffect(() => {
+    if (wearableConnected) {
+      fetchFitbitData();
+    }
+  }, [wearableConnected]);
+
+  // Add loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <Container className="pt-20 pb-8 space-y-8">
-        {/* Welcome Section */}
+      <Container className="pt-20 pb-8 space-y-6">
+        {/* Header Section */}
         <div className="flex justify-between items-center">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -266,17 +435,14 @@ export default function Dashboard() {
               })}
             </p>
           </motion.div>
-          <Button variant="outline" size="icon">
-            <Bell className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="outline" size="icon">
+              <Bell className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
-        {/* Add MoodForm near the top */}
-        <div className="flex justify-end">
-          <MoodForm />
-        </div>
-
-        {/* Crisis Alert - Shows based on risk assessment */}
+        {/* Crisis Alert */}
         {showCrisisAlert && (
           <Alert variant="destructive" className="animate-pulse">
             <AlertCircle className="h-4 w-4" />
@@ -285,286 +451,335 @@ export default function Dashboard() {
               We've noticed you might be having a difficult time. Help is
               available 24/7.
               <div className="mt-2">
-                <Button variant="secondary" className="mr-2" onClick={() => {}}>
+                <Button variant="secondary" className="mr-2">
                   <PhoneCall className="mr-2 h-4 w-4" />
                   Call Crisis Line
                 </Button>
-                <Button variant="outline" onClick={() => {}}>
-                  Message Therapist
-                </Button>
+                <Button variant="outline">Message Therapist</Button>
               </div>
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Quick Actions */}
-        <div className="flex gap-4 overflow-x-auto pb-2">
-          <Button variant="outline" className="flex items-center gap-2">
-            <MessageSquare className="w-4 h-4" />
-            Start Therapy Session
-          </Button>
-          <Button variant="outline" className="flex items-center gap-2">
-            <BrainCircuit className="w-4 h-4" />
-            AI Check-in
-          </Button>
-          <Button variant="outline" className="flex items-center gap-2">
-            <Settings className="w-4 h-4" />
-            Adjust Environment
-          </Button>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {wellnessStats.map((stat, index) => (
-            <motion.div
-              key={stat.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <Card className="border-primary/10 hover:border-primary/20 transition-colors">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                      <stat.icon className={`w-6 h-6 ${stat.color}`} />
+        {/* Main Grid Layout */}
+        <div className="space-y-6">
+          {/* Top Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Quick Actions Card */}
+            <Card className="border-primary/10 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-primary/10 to-transparent" />
+              <CardContent className="p-6 relative">
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Sparkles className="w-5 h-5 text-primary" />
                     </div>
                     <div>
+                      <h3 className="font-semibold text-lg">Quick Actions</h3>
                       <p className="text-sm text-muted-foreground">
-                        {stat.title}
+                        Start your wellness journey
                       </p>
-                      <h3 className="text-2xl font-bold text-foreground">
-                        {stat.value}
-                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3">
+                    <Button
+                      variant="default"
+                      className={cn(
+                        "w-full justify-between items-center p-6 h-auto group/button",
+                        "bg-gradient-to-r from-primary/90 to-primary hover:from-primary hover:to-primary/90",
+                        "transition-all duration-200 group-hover:translate-y-[-2px]"
+                      )}
+                      onClick={handleStartTherapy}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                          <MessageSquare className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="text-left">
+                          <div className="font-semibold text-white">
+                            Start Therapy
+                          </div>
+                          <div className="text-xs text-white/80">
+                            Begin a new session
+                          </div>
+                        </div>
+                      </div>
+                      <div className="opacity-0 group-hover/button:opacity-100 transition-opacity">
+                        <ArrowRight className="w-5 h-5 text-white" />
+                      </div>
+                    </Button>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "flex flex-col h-[120px] px-4 py-3 group/mood hover:border-primary/50",
+                          "justify-center items-center text-center",
+                          "transition-all duration-200 group-hover:translate-y-[-2px]"
+                        )}
+                        onClick={handleMoodEntry}
+                      >
+                        <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center mb-2">
+                          <Heart className="w-5 h-5 text-rose-500" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">Track Mood</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            How are you feeling?
+                          </div>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "flex flex-col h-[120px] px-4 py-3 group/ai hover:border-primary/50",
+                          "justify-center items-center text-center",
+                          "transition-all duration-200 group-hover:translate-y-[-2px]"
+                        )}
+                        onClick={handleAICheckIn}
+                      >
+                        <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center mb-2">
+                          <BrainCircuit className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">AI Check-in</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            Quick wellness check
+                          </div>
+                        </div>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Today's Overview Card */}
+            <Card className="border-primary/10">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">Today's Overview</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {wellnessStats.map((stat) => (
+                      <div
+                        key={stat.title}
+                        className={cn(
+                          "p-3 rounded-lg transition-all duration-200",
+                          stat.bgColor,
+                          "hover:scale-[1.02]"
+                        )}
+                      >
+                        <stat.icon className={`w-5 h-5 ${stat.color} mb-2`} />
+                        <p className="text-sm text-muted-foreground">
+                          {stat.title}
+                        </p>
+                        <p className="text-xl font-bold">{stat.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AI Insights Card */}
+            <Card className="border-primary/10">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">AI Insights</h3>
+                  <div className="space-y-3">
+                    {aiInsights.map((insight, index) => (
+                      <div
+                        key={index}
+                        className="p-3 rounded-lg bg-primary/5 space-y-2"
+                      >
+                        <div className="flex items-center gap-2">
+                          <insight.icon className="w-4 h-4 text-primary" />
+                          <p className="font-medium text-sm">{insight.title}</p>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {insight.description}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left side - Spans 2 columns */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Fitbit Connect Card */}
+              <Card className="border-primary/10 overflow-hidden">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-6">
+                    {/* Left side - Icon */}
+                    <div className="shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center ring-2 ring-primary/5">
+                        <Wifi className="w-6 h-6" />
+                      </div>
+                    </div>
+
+                    {/* Middle - Text content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold mb-1">
+                          Connect Your Fitbit
+                        </h3>
+                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                          Coming Soon
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Track health metrics and get personalized insights
+                      </p>
+                    </div>
+
+                    {/* Right side - Button */}
+                    <div className="shrink-0">
+                      <Button
+                        className="bg-primary/20 hover:bg-primary/30 cursor-not-allowed"
+                        disabled
+                      >
+                        Connect
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Security note */}
+                  <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="w-1 h-1 rounded-full bg-green-500" />
+                    <span>Integration coming soon - Stay tuned!</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Anxiety Games - Now directly below Fitbit */}
+              <AnxietyGames />
+            </div>
+
+            {/* Right Column - Activities */}
+            <div>
+              <Card className="border-primary/10">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <CardTitle>Activity Overview</CardTitle>
+                      <CardDescription>
+                        Your wellness journey over time
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <div className="w-3 h-3 rounded-sm bg-muted" />
+                        <span>Less</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <div className="w-3 h-3 rounded-sm bg-primary" />
+                        <span>More</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Contribution Graph */}
+                  <ContributionGraph data={activityHistory} />
+
+                  {/* Recent Activities */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-sm">Recent Activities</h4>
+                    <div className="space-y-2">
+                      {activityHistory.slice(-3).flatMap((day) =>
+                        day.activities.map((activity, i) => (
+                          <div
+                            key={`${format(day.date, "yyyy-MM-dd")}-${i}`}
+                            className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={cn(
+                                  "w-2 h-2 rounded-full",
+                                  activity.completed
+                                    ? "bg-green-500"
+                                    : "bg-yellow-500"
+                                )}
+                              />
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {activity.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(day.date, "MMM d")}{" "}
+                                  {activity.time && `at ${activity.time}`}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                "text-xs",
+                                activity.completed && "text-green-500"
+                              )}
+                            >
+                              {activity.completed ? "Completed" : "Start"}
+                            </Button>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* Anxiety Games */}
-        <AnxietyGames />
-
-        {/* Wearable Connection Status */}
-        {!wearableConnected && (
-          <Card className="border-primary/10">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <h3 className="font-semibold">Connect Your Fitbit</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Track your health metrics automatically
-                  </p>
-                </div>
-                <FitbitConnect onConnect={() => setWearableConnected(true)} />
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Activities Section */}
-        <Card className="border-primary/10">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Today's Activities
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ActivityList
-              activities={activities}
-              onStatusUpdate={async (activityId, status) => {
-                await updateActivityStatus({
-                  activityId,
-                  status,
-                  completedAt: status === "completed" ? new Date() : undefined,
-                });
-                fetchTodaysActivities();
-              }}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Update the health metrics card with real data */}
-        <Card className="border-primary/10">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
-              Health Metrics
-              {healthMetrics.lastSynced && (
-                <span className="text-sm text-muted-foreground">
-                  Last synced:{" "}
-                  {new Date(healthMetrics.lastSynced).toLocaleTimeString()}
-                </span>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              {healthMetrics.heartRate && (
-                <div className="p-3 rounded-lg bg-primary/5">
-                  <p className="text-sm text-muted-foreground">Heart Rate</p>
-                  <p className="text-2xl font-bold">
-                    {healthMetrics.heartRate}
-                  </p>
-                  <p className="text-xs text-muted-foreground">BPM</p>
-                </div>
-              )}
-              {healthMetrics.steps && (
-                <div className="p-3 rounded-lg bg-primary/5">
-                  <p className="text-sm text-muted-foreground">Steps</p>
-                  <p className="text-2xl font-bold">{healthMetrics.steps}</p>
-                  <p className="text-xs text-muted-foreground">Today</p>
-                </div>
-              )}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Enhanced Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Left Column - Chat and Mood */}
-          <div className="space-y-4">
-            <ExpandableChat />
-            <MoodTracker />
-          </div>
-
-          {/* Middle Column - Smart Environment */}
-          <Card className="border-primary/10">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                <Wifi className="h-5 w-5 text-primary" />
-                Smart Environment
-              </CardTitle>
-              <CardDescription>
-                Optimize your space for well-being
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Lighting Control */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <Lamp className="h-4 w-4 text-primary" />
-                    <span>Lighting</span>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    {smartEnvironment.lights.isOn ? "On" : "Off"}
-                  </Button>
-                </div>
-                <Progress value={smartEnvironment.lights.brightness} />
-              </div>
-
-              {/* Temperature Control */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <Thermometer className="h-4 w-4 text-primary" />
-                    <span>Temperature</span>
-                  </div>
-                  <span>{smartEnvironment.temperature}°F</span>
-                </div>
-                <Progress value={smartEnvironment.temperature} max={100} />
-              </div>
-
-              {/* Music Control */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <Music className="h-4 w-4 text-primary" />
-                    <span>Ambient Music</span>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    {smartEnvironment.music.isPlaying ? "Playing" : "Play"}
-                  </Button>
-                </div>
-                <Progress value={smartEnvironment.music.volume} />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Right Column */}
-          <div className="space-y-4">
-            {/* Medication Tracking */}
-            <Card className="border-primary/10">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                  <Pill className="h-5 w-5 text-primary" />
-                  Medication Tracker
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {medications.map((med, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 rounded-lg bg-primary/5"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div
-                          className={`w-2 h-2 rounded-full ${
-                            med.taken ? "bg-green-500" : "bg-yellow-500"
-                          }`}
-                        />
-                        <div>
-                          <h4 className="font-medium text-foreground">
-                            {med.name}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {med.dosage} at {med.time}
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm">
-                        {med.taken ? "Taken" : "Take Now"}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Wellness Activities */}
-            <Card className="border-primary/10">
-              <CardHeader>
-                <CardTitle className="text-xl font-semibold flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-primary" />
-                  Today's Activities
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {interventions.map((intervention, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 rounded-lg bg-primary/5"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Timer className="w-4 h-4 text-primary" />
-                        <div>
-                          <h4 className="font-medium text-foreground">
-                            {intervention.title}
-                          </h4>
-                          <p className="text-sm text-muted-foreground">
-                            {intervention.duration}
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm">
-                        {intervention.completed ? "Completed" : "Start"}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </Container>
 
-      {/* Fixed Chat Component */}
+      {/* Fixed Chat */}
       <FixedChat />
+
+      {/* Mood tracking modal */}
+      {showMoodModal && (
+        <Dialog open={showMoodModal} onOpenChange={setShowMoodModal}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>How are you feeling?</DialogTitle>
+              <DialogDescription>
+                Track your mood to get personalized insights and support.
+              </DialogDescription>
+            </DialogHeader>
+            <MoodForm onSubmit={() => setShowMoodModal(false)} />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* AI check-in chat */}
+      {showCheckInChat && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50">
+          <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-background border-l shadow-lg">
+            <div className="flex h-full flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b">
+                <h3 className="font-semibold">AI Check-in</h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowCheckInChat(false)}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                {/* Add your AI chat interface here */}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

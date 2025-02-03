@@ -4,6 +4,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
+import { Providers } from "./providers";
+import { AuthProvider } from "@/lib/context/auth-context";
 // import { Footer } from "@/components/Footer";
 
 // Initialize the fonts
@@ -27,17 +29,21 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${plusJakarta.variable} font-sans antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {/* Temporarily removed Header */}
-          <Header />
-          <main className="font-plus-jakarta">{children}</main>
-          <Footer />
-        </ThemeProvider>
+        <Providers>
+          <AuthProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {/* Temporarily removed Header */}
+              <Header />
+              <main className="font-plus-jakarta">{children}</main>
+              <Footer />
+            </ThemeProvider>
+          </AuthProvider>
+        </Providers>
       </body>
     </html>
   );

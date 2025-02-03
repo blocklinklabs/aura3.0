@@ -2,12 +2,26 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Heart, Menu, X, MessageCircle, AudioWaveform } from "lucide-react";
+import {
+  Heart,
+  Menu,
+  X,
+  MessageCircle,
+  AudioWaveform,
+  LogOut,
+  LogIn,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
+import { useAuth } from "@/lib/context/auth-context";
+import { LoginModal } from "@/components/auth/login-modal";
+import { useLocalStorage } from "@/lib/hooks/use-local-storage";
 
 export function Header() {
+  const { isAuthenticated, user, login, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [hasVisited] = useLocalStorage("has_visited", false);
 
   const navItems = [
     { href: "#features", label: "Features" },
@@ -15,6 +29,14 @@ export function Header() {
     { href: "#support", label: "Support" },
     { href: "#resources", label: "Resources" },
   ];
+
+  const handleLoginClick = () => {
+    if (!hasVisited) {
+      setShowLoginModal(true);
+    } else {
+      login();
+    }
+  };
 
   return (
     <div className="w-full fixed top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -45,8 +67,40 @@ export function Header() {
               ))}
             </nav>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <ThemeToggle />
+
+              {isAuthenticated ? (
+                <>
+                  <Button
+                    asChild
+                    className="hidden md:flex gap-2 bg-primary/90 hover:bg-primary"
+                  >
+                    <Link href="/chat">
+                      <MessageCircle className="w-4 h-4 mr-1" />
+                      Start Chat
+                    </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={logout}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign out
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="default"
+                  onClick={handleLoginClick}
+                  className="bg-primary/90 hover:bg-primary"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign in
+                </Button>
+              )}
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -58,15 +112,6 @@ export function Header() {
                 ) : (
                   <Menu className="h-5 w-5" />
                 )}
-              </Button>
-              <Button
-                asChild
-                className="hidden md:flex gap-2 bg-primary/90 hover:bg-primary transition-colors duration-300"
-              >
-                <Link href="/chat">
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Start Chat</span>
-                </Link>
               </Button>
             </div>
           </div>
@@ -99,6 +144,11 @@ export function Header() {
           </div>
         )}
       </header>
+
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+      />
     </div>
   );
 }

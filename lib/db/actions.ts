@@ -8,8 +8,9 @@ import {
   chatHistory,
   wearableDevices,
   activities,
+  wearableMetrics,
 } from "./schema";
-import { eq, and, gte } from "drizzle-orm";
+import { eq, and, gte, desc } from "drizzle-orm";
 
 export async function createUser(userData: {
   email: string;
@@ -169,4 +170,53 @@ export async function getTodaysActivities(userId: string) {
       and(eq(activities.userId, userId), gte(activities.scheduledFor, today))
     )
     .orderBy(activities.scheduledFor);
+}
+
+export async function getLatestHealthMetrics(userId: string) {
+  return await db
+    .select()
+    .from(wearableMetrics)
+    .where(eq(wearableMetrics.userId, userId))
+    .orderBy(desc(wearableMetrics.timestamp))
+    .limit(1)
+    .then((results) => results[0] || null);
+}
+
+export async function getAllTherapySessions(userId: string) {
+  return await db
+    .select()
+    .from(therapySessions)
+    .where(eq(therapySessions.userId, userId))
+    .orderBy(desc(therapySessions.scheduledTime));
+}
+
+export async function createTherapySession({
+  userId,
+  type,
+  status = "in_progress",
+}: {
+  userId: string;
+  type: string;
+  status?: string;
+}) {
+  return await db
+    .insert(therapySessions)
+    .values({
+      userId,
+      scheduledTime: new Date(),
+      type,
+      status,
+    })
+    .returning();
+}
+
+export async function updateTherapySession(
+  sessionId: string,
+  data: Partial<typeof therapySessions.$inferInsert>
+) {
+  return await db
+    .update(therapySessions)
+    .set(data)
+    .where(eq(therapySessions.id, sessionId))
+    .returning();
 }
