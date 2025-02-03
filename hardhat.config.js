@@ -1,5 +1,4 @@
 require("@nomicfoundation/hardhat-toolbox");
-require("@nomicfoundation/hardhat-ignition");
 const fs = require("fs");
 const privateKey = fs.readFileSync("secrete.txt").toString();
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -8,7 +7,7 @@ module.exports = {
   defaultNetwork: "sepolia",
   networks: {
     hardhat: {
-      chainId: 31337,
+      chainId: 4202,
     },
     emvOnFlow: {
       url: "https://testnet.evm.nodes.onflow.org",
@@ -31,4 +30,5 @@ module.exports = {
   loggingEnabled: true,
 };
 
-// npx hardhat ignition deploy ./ignition/modules/Zero2Hero.js --network BitTorrent
+// 0x92EECac0a67372fB4420FB61aAd28b77B335A790
+// TherapyConsentModule#TherapyConsent - 0x92EECac0a67372fB4420FB61aAd28b77B335A790
