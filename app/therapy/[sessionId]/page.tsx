@@ -63,7 +63,7 @@ export default function TherapyPage() {
   };
 
   const sendMessage = (text: string) => {
-    const userMessage = {
+    const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
       content: text.trim(),
@@ -76,7 +76,7 @@ export default function TherapyPage() {
 
     // Simulate AI response
     setTimeout(() => {
-      const aiMessage = {
+      const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content:

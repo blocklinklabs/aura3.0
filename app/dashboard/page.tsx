@@ -342,14 +342,14 @@ export default function Dashboard() {
   }, [mounted]);
 
   const fetchTodaysActivities = async () => {
-    const response = await getTodaysActivities(userId);
+    const response = (await getTodaysActivities(userId)) as any;
     setActivities(response);
   };
 
   const fetchHealthMetrics = async () => {
     if (wearableConnected) {
       // Fetch latest metrics from Fitbit
-      const metrics = await getLatestHealthMetrics(userId);
+      const metrics = (await getLatestHealthMetrics(userId)) as any;
       setHealthMetrics(metrics);
     }
   };

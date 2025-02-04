@@ -23,7 +23,7 @@ secrete.txt
 # next.js
 /.next/
 /out/
-
+/scripts
 # production
 /build
 

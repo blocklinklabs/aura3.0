@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/lib/context/auth-context";
+import { useToast } from "@/hooks/use-toast";
 
 export function BookSession() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
+  console.log(user);
   const handleBooking = async () => {
     try {
       setIsLoading(true);
@@ -19,7 +20,7 @@ export function BookSession() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          walletId: user.walletId,
+          walletId: user?.wallet,
           amount: "0.01", // 0.01 ETH for session
           toAddress: "0x...", // Your therapy service wallet
         }),

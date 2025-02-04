@@ -15,6 +15,10 @@ import { Slider } from "@/components/ui/slider";
 import { Plus } from "lucide-react";
 import { useNovaAgent } from "@/lib/agents/nova.agent";
 
+interface MoodFormProps {
+  onSubmit: () => void;
+}
+
 const emotions = [
   { value: 0, label: "😔 Down", color: "from-blue-500/50" },
   { value: 25, label: "😊 Content", color: "from-green-500/50" },
@@ -23,7 +27,7 @@ const emotions = [
   { value: 100, label: "✨ Excited", color: "from-pink-500/50" },
 ];
 
-export function MoodForm() {
+export function MoodForm({ onSubmit }: MoodFormProps) {
   const [open, setOpen] = useState(false);
   const [mood, setMood] = useState(50);
   const [note, setNote] = useState("");

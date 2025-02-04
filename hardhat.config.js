@@ -1,12 +1,11 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
-require("@nomiclabs/hardhat-etherscan");
 
 // Replace file reading with environment variable
-const privateKey = process.env.WALLET_PRIVATE_KEY;
+const privateKey = process.env.WALLET_PRIVATE_KEY_BASE;
 
 /** @type import('hardhat/config').HardhatUserConfig */
-// npx hardhat ignition deploy ./ignition/modules/TherapyConsent.js --network emvOnFlow
+// npx hardhat ignition deploy ./ignition/modules/TherapyConsent.js --network baseSepolia
 module.exports = {
   defaultNetwork: "sepolia",
   networks: {
@@ -17,6 +16,10 @@ module.exports = {
       url: "https://testnet.evm.nodes.onflow.org",
       accounts: [privateKey],
       gasPrice: 1000000000,
+    },
+    baseSepolia: {
+      url: "https://sepolia.base.org",
+      accounts: [privateKey],
     },
   },
   solidity: {
@@ -33,6 +36,3 @@ module.exports = {
   throwOnCallFailures: true,
   loggingEnabled: true,
 };
-
-// 0x92EECac0a67372fB4420FB61aAd28b77B335A790
-// TherapyConsentModule#TherapyConsent - 0x92EECac0a67372fB4420FB61aAd28b77B335A790
