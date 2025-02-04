@@ -32,6 +32,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { BreathingGame } from "@/components/games/breathing-game";
+import { ZenGarden } from "@/components/games/zen-garden";
+import { ForestGame } from "@/components/games/forest-game";
+import { OceanWaves } from "@/components/games/ocean-waves";
 
 interface Message {
   id: string;
@@ -68,6 +72,15 @@ interface DrugPrompt {
   message: string;
 }
 
+interface StressPrompt {
+  trigger: string;
+  activity: {
+    type: "breathing" | "garden" | "forest" | "waves";
+    title: string;
+    description: string;
+  };
+}
+
 const suggestedQuestions: SuggestedQuestion[] = [
   { id: "1", text: "How can I manage my anxiety better?" },
   { id: "2", text: "I've been feeling overwhelmed lately" },
@@ -101,6 +114,9 @@ export default function TherapyPage() {
   const [mounted, setMounted] = useState(false);
   const [drugPrompt, setDrugPrompt] = useState<DrugPrompt | null>(null);
   const [drugInfo, setDrugInfo] = useState<DrugInfo | null>(null);
+  const [stressPrompt, setStressPrompt] = useState<StressPrompt | null>(null);
+  const [showActivity, setShowActivity] = useState(false);
+  const [isChatPaused, setIsChatPaused] = useState(false);
 
   // Load chat history when session ID changes
   useEffect(() => {
@@ -194,9 +210,32 @@ export default function TherapyPage() {
     }
   }, [messages, isTyping, scrollToBottom]);
 
+  const activities = [
+    {
+      type: "breathing" as const,
+      title: "Breathing Exercise",
+      description: "Follow calming breathing exercises with visual guidance",
+    },
+    {
+      type: "garden" as const,
+      title: "Zen Garden",
+      description: "Create and maintain your digital peaceful space",
+    },
+    {
+      type: "forest" as const,
+      title: "Mindful Forest",
+      description: "Take a peaceful walk through a virtual forest",
+    },
+    {
+      type: "waves" as const,
+      title: "Ocean Waves",
+      description: "Match your breath with gentle ocean waves",
+    },
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || isTyping || !user?.id) return;
+    if (!message.trim() || isTyping || !user?.id || isChatPaused) return;
 
     const userMessage = message.trim();
     setMessage("");
@@ -220,6 +259,14 @@ export default function TherapyPage() {
           timestamp: new Date(),
         },
       ]);
+
+      // Check for stress signals first
+      const stressCheck = detectStressSignals(userMessage);
+      if (stressCheck) {
+        setStressPrompt(stressCheck);
+        setIsTyping(false); // Stop typing indicator
+        return; // Don't proceed with AI response
+      }
 
       // Check for drug mentions (simplified example)
       const drugMentionRegex =
@@ -373,6 +420,90 @@ export default function TherapyPage() {
     }
   };
 
+  // Add stress detection function
+  const detectStressSignals = (message: string): StressPrompt | null => {
+    const stressKeywords = [
+      "stress",
+      "anxiety",
+      "worried",
+      "panic",
+      "overwhelmed",
+      "nervous",
+      "tense",
+      "pressure",
+      "can't cope",
+      "exhausted",
+    ];
+
+    const lowercaseMsg = message.toLowerCase();
+    const foundKeyword = stressKeywords.find((keyword) =>
+      lowercaseMsg.includes(keyword)
+    );
+
+    if (foundKeyword) {
+      // Randomly select an activity (we can make this smarter later)
+      const activities = [
+        {
+          type: "breathing" as const,
+          title: "Breathing Exercise",
+          description:
+            "Follow calming breathing exercises with visual guidance",
+        },
+        {
+          type: "garden" as const,
+          title: "Zen Garden",
+          description: "Create and maintain your digital peaceful space",
+        },
+        {
+          type: "forest" as const,
+          title: "Mindful Forest",
+          description: "Take a peaceful walk through a virtual forest",
+        },
+        {
+          type: "waves" as const,
+          title: "Ocean Waves",
+          description: "Match your breath with gentle ocean waves",
+        },
+      ];
+
+      return {
+        trigger: foundKeyword,
+        activity: activities[Math.floor(Math.random() * activities.length)],
+      };
+    }
+
+    return null;
+  };
+
+  // Add activity components
+  const renderActivity = (type: string) => {
+    switch (type) {
+      case "breathing":
+        return <BreathingGame />;
+      case "garden":
+        return <ZenGarden />;
+      case "forest":
+        return <ForestGame />;
+      case "waves":
+        return <OceanWaves />;
+      default:
+        return null;
+    }
+  };
+
+  // Update the activity start handler
+  const handleActivityStart = () => {
+    setShowActivity(true);
+    setIsChatPaused(true);
+  };
+
+  // Add close handler
+  const handleCloseActivity = () => {
+    setShowActivity(false);
+    setStressPrompt(null);
+    setIsChatPaused(false);
+  };
+
   return (
     <div className="relative max-w-6xl mx-auto px-4">
       <div className="flex h-[calc(100vh-4rem)] mt-20">
@@ -517,17 +648,22 @@ export default function TherapyPage() {
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Ask me anything..."
+                  placeholder={
+                    isChatPaused
+                      ? "Complete the activity to continue..."
+                      : "Ask me anything..."
+                  }
                   className={cn(
                     "w-full resize-none rounded-2xl border bg-background",
                     "p-3 pr-12 min-h-[48px] max-h-[200px]",
                     "focus:outline-none focus:ring-2 focus:ring-primary/50",
                     "transition-all duration-200",
                     "placeholder:text-muted-foreground/70",
-                    isTyping && "opacity-50 cursor-not-allowed"
+                    (isTyping || isChatPaused) &&
+                      "opacity-50 cursor-not-allowed"
                   )}
                   rows={1}
-                  disabled={isTyping}
+                  disabled={isTyping || isChatPaused}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -543,11 +679,11 @@ export default function TherapyPage() {
                     "rounded-xl transition-all duration-200",
                     "bg-primary hover:bg-primary/90",
                     "shadow-sm shadow-primary/20",
-                    (isTyping || !message.trim()) &&
+                    (isTyping || isChatPaused || !message.trim()) &&
                       "opacity-50 cursor-not-allowed",
                     "group-hover:scale-105 group-focus-within:scale-105"
                   )}
-                  disabled={isTyping || !message.trim()}
+                  disabled={isTyping || isChatPaused || !message.trim()}
                 >
                   <Send className="w-4 h-4" />
                 </Button>
@@ -666,6 +802,76 @@ export default function TherapyPage() {
               </ul>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Add Stress Management Prompt */}
+      {stressPrompt && !showActivity && (
+        <div className="fixed bottom-24 right-4 max-w-sm">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-start">
+                <div className="flex gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <CardTitle className="text-sm font-medium">
+                    Take a Moment
+                  </CardTitle>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setStressPrompt(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription>
+                Would you like to try a quick {stressPrompt.activity.title} to
+                help you feel more relaxed?
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={handleActivityStart}
+                >
+                  Yes, I'd like that
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setStressPrompt(null)}
+                >
+                  No, thanks
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Show Activity */}
+      {showActivity && stressPrompt && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-background p-6 rounded-lg max-w-2xl w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold">
+                {stressPrompt.activity.title}
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCloseActivity}
+                className="h-8 w-8 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            {renderActivity(stressPrompt.activity.type)}
+          </div>
         </div>
       )}
     </div>
