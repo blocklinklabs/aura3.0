@@ -1,27 +1,32 @@
 "use client";
 
 import { PrivyProvider } from "@privy-io/react-auth";
-import { useTheme } from "next-themes";
+import { AuthProvider } from "@/lib/contexts/auth-context";
+import { ThemeProvider } from "@/components/theme-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const { theme } = useTheme();
-
   return (
     <PrivyProvider
-      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID!}
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""}
       config={{
-        appearance: {
-          theme: theme as "light" | "dark",
-          accentColor: "hsl(var(--primary))",
-          showWalletLoginFirst: false,
-        },
         loginMethods: ["email", "wallet"],
-        embeddedWallets: {
-          createOnLogin: "users-without-wallets",
+        appearance: {
+          theme: "dark",
+          accentColor: "#674188",
+          showWalletLoginFirst: true,
         },
       }}
     >
-      {children}
+      <AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+      </AuthProvider>
     </PrivyProvider>
   );
 }

@@ -10,9 +10,10 @@ import {
   activities,
   wearableMetrics,
 } from "./schema";
-import { eq, and, gte, desc } from "drizzle-orm";
+import { eq, and, gte, desc, sql } from "drizzle-orm";
 
 export async function createUser(userData: {
+  id: string;
   email: string;
   name: string;
   encryptedData: any;
@@ -50,6 +51,7 @@ export async function scheduleTherapySession(
   return await db.insert(therapySessions).values({
     userId,
     scheduledTime,
+    type: "text",
     status: "scheduled",
   });
 }
@@ -78,15 +80,20 @@ export async function saveChatMessage({
   role: "user" | "assistant";
   context?: any;
 }) {
-  return await db
-    .insert(chatHistory)
-    .values({
-      userId,
-      message,
-      role,
-      context,
-    })
-    .returning();
+  try {
+    return await db
+      .insert(chatHistory)
+      .values({
+        userId,
+        message,
+        role,
+        context,
+      })
+      .returning();
+  } catch (error) {
+    console.error("Error saving chat message:", error);
+    throw error;
+  }
 }
 
 export async function getChatHistory(userId: string) {
@@ -133,14 +140,16 @@ export async function createActivity({
   sessionId?: string;
   activityData: Partial<typeof activities.$inferInsert>;
 }) {
-  return await db
-    .insert(activities)
-    .values({
-      userId,
-      sessionId,
-      ...activityData,
-    })
-    .returning();
+  const values = {
+    userId,
+    sessionId,
+    title: activityData.title || "Untitled Activity",
+    type: activityData.type || "general",
+    status: activityData.status || "pending",
+    ...activityData,
+  };
+
+  return await db.insert(activities).values(values).returning();
 }
 
 export async function updateActivityStatus({
@@ -183,40 +192,92 @@ export async function getLatestHealthMetrics(userId: string) {
 }
 
 export async function getAllTherapySessions(userId: string) {
-  return await db
-    .select()
-    .from(therapySessions)
-    .where(eq(therapySessions.userId, userId))
-    .orderBy(desc(therapySessions.scheduledTime));
+  try {
+    console.log("Getting sessions for userId:", userId);
+    const sessions = await db
+      .select({
+        id: therapySessions.id,
+        userId: therapySessions.userId,
+        type: therapySessions.type,
+        status: therapySessions.status,
+        scheduledTime: therapySessions.scheduledTime,
+        summary: therapySessions.summary,
+        // Only select title if it exists
+        // title: therapySessions.title,
+      })
+      .from(therapySessions)
+      .where(eq(therapySessions.userId, userId))
+      .orderBy(desc(therapySessions.scheduledTime));
+
+    console.log("Found sessions:", sessions);
+    return sessions;
+  } catch (error) {
+    console.error("Error getting therapy sessions:", error);
+    throw error;
+  }
 }
 
 export async function createTherapySession({
   userId,
   type,
-  status = "in_progress",
 }: {
   userId: string;
   type: string;
-  status?: string;
 }) {
-  return await db
-    .insert(therapySessions)
-    .values({
-      userId,
-      scheduledTime: new Date(),
-      type,
-      status,
-    })
-    .returning();
+  try {
+    const session = await db
+      .insert(therapySessions)
+      .values({
+        userId,
+        type,
+        status: "in_progress",
+        scheduledTime: new Date(),
+        // Add initial title
+        title: `New Session - ${new Date().toLocaleString()}`,
+      })
+      .returning();
+
+    return session;
+  } catch (error) {
+    console.error("Failed to create therapy session:", error);
+    throw error;
+  }
 }
 
 export async function updateTherapySession(
   sessionId: string,
-  data: Partial<typeof therapySessions.$inferInsert>
+  data: {
+    title?: string;
+    summary?: string;
+    status?: string;
+  }
 ) {
-  return await db
-    .update(therapySessions)
-    .set(data)
-    .where(eq(therapySessions.id, sessionId))
-    .returning();
+  try {
+    const session = await db
+      .update(therapySessions)
+      .set({
+        ...data,
+        updatedAt: new Date(),
+      })
+      .where(eq(therapySessions.id, sessionId))
+      .returning();
+
+    return session;
+  } catch (error) {
+    console.error("Failed to update therapy session:", error);
+    throw error;
+  }
+}
+
+export async function getSessionChatHistory(sessionId: string) {
+  try {
+    return await db
+      .select()
+      .from(chatHistory)
+      .where(sql`${chatHistory.context}->>'sessionId' = ${sessionId}`)
+      .orderBy(chatHistory.timestamp);
+  } catch (error) {
+    console.error("Error getting session chat history:", error);
+    throw error;
+  }
 }

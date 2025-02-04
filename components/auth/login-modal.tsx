@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,59 +12,39 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Brain, Loader2 } from "lucide-react";
-import { useLocalStorage } from "@/lib/hooks/use-local-storage";
+import { useAuth } from "@/lib/contexts/auth-context";
 
-interface LoginModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onLoginSuccess: () => void;
-}
+export function LoginModal() {
+  const {
+    showLoginModal,
+    showUserForm,
+    isLoading,
+    login,
+    updateUser,
+    setShowLoginModal,
+  } = useAuth();
 
-export function LoginModal({
-  isOpen,
-  onClose,
-  onLoginSuccess,
-}: LoginModalProps) {
-  const { login } = usePrivy();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async () => {
-    if (!name.trim() || !email.trim()) return;
+  useEffect(() => {
+    if (!showLoginModal) {
+      setName("");
+      setEmail("");
+    }
+  }, [showLoginModal]);
 
-    try {
-      setIsLoading(true);
-
-      // Create user first
-      const userResponse = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email }),
-      });
-
-      if (!userResponse.ok) throw new Error("Failed to create user");
-      const { user } = await userResponse.json();
-
-      // Create server wallet
-      // await fetch("/api/wallet", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ userId: user.id }),
-      // });
-
+  const handleSubmit = async () => {
+    if (showUserForm) {
+      if (!name.trim() || !email.trim()) return;
+      await updateUser({ name, email });
+    } else {
       await login();
-      onLoginSuccess();
-      onClose();
-    } catch (error) {
-      console.error("Login error:", error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <div className="mx-auto mb-4">
@@ -74,48 +53,59 @@ export function LoginModal({
             </div>
           </div>
           <DialogTitle className="text-center">
-            Welcome to AI Therapist
+            {showUserForm ? "Complete Your Profile" : "Welcome to AI Therapist"}
           </DialogTitle>
           <DialogDescription className="text-center">
-            Sign in to start your wellness journey
+            {showUserForm
+              ? "Please provide your details to continue"
+              : "Sign in to start your wellness journey"}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input
-              id="name"
-              placeholder="Enter your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+
+        {showUserForm && (
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                placeholder="Enter your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-        </div>
+        )}
+
         <Button
           className="w-full"
           size="lg"
-          onClick={handleLogin}
-          disabled={!name.trim() || !email.trim() || isLoading}
+          onClick={handleSubmit}
+          disabled={
+            isLoading || (showUserForm && (!name.trim() || !email.trim()))
+          }
         >
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Connecting...
+              {showUserForm ? "Saving..." : "Connecting..."}
             </>
+          ) : showUserForm ? (
+            "Complete Sign Up"
           ) : (
             "Get Started"
           )}
         </Button>
+
         <p className="text-xs text-center text-muted-foreground mt-4">
           By continuing, you agree to our Terms of Service and Privacy Policy
         </p>

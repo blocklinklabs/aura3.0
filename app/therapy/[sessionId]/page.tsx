@@ -1,12 +1,37 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Send, Bot, User, Loader2, Sparkles, X } from "lucide-react";
+import {
+  Send,
+  Bot,
+  User,
+  Loader2,
+  Sparkles,
+  X,
+  XCircle,
+  AlertCircle,
+} from "lucide-react";
 import { SessionHistory } from "@/components/therapy/session-history";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/lib/contexts/auth-context";
+import Modal from "@/components/Modal";
+import {
+  createTherapySession,
+  saveChatMessage,
+  getSessionChatHistory,
+  updateTherapySession,
+} from "@/lib/db/actions";
+import ReactMarkdown from "react-markdown";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface Message {
   id: string;
@@ -18,6 +43,29 @@ interface Message {
 interface SuggestedQuestion {
   id: string;
   text: string;
+}
+
+interface DBMessage {
+  id: string;
+  userId: string | null;
+  message: string;
+  role: string;
+  timestamp: Date | null;
+  sentiment: string | null;
+  context: unknown;
+}
+
+interface DrugInfo {
+  name: string;
+  warnings?: string[];
+  indications?: string[];
+  dosage?: string[];
+  activeIngredients?: string[];
+}
+
+interface DrugPrompt {
+  drugName: string;
+  message: string;
 }
 
 const suggestedQuestions: SuggestedQuestion[] = [
@@ -43,49 +91,286 @@ const glowAnimation = {
 
 export default function TherapyPage() {
   const params = useParams();
+  const router = useRouter();
+  const { isAuthenticated, user, isLoading } = useAuth();
+  const [showModal, setShowModal] = useState(false);
   const [message, setMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [mounted, setMounted] = useState(false);
+  const [drugPrompt, setDrugPrompt] = useState<DrugPrompt | null>(null);
+  const [drugInfo, setDrugInfo] = useState<DrugInfo | null>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // Load chat history when session ID changes
+  useEffect(() => {
+    if (params.sessionId && user?.id) {
+      loadChatHistory();
+    }
+  }, [params.sessionId, user?.id]);
+
+  const loadChatHistory = async () => {
+    try {
+      const history = await getSessionChatHistory(params.sessionId as string);
+      setMessages(
+        history.map((msg: DBMessage) => ({
+          id: msg.id,
+          role: msg.role as "user" | "assistant",
+          content: msg.message,
+          timestamp: new Date(msg.timestamp || Date.now()),
+        }))
+      );
+    } catch (error) {
+      console.error("Failed to load chat history:", error);
+    }
   };
 
+  const updateSessionInfo = async (content: string) => {
+    if (!params.sessionId) return;
+
+    try {
+      // Generate a title from the first message if it's the first user message
+      if (messages.length === 1 && messages[0].role === "user") {
+        const title =
+          content.length > 60 ? `${content.substring(0, 60)}...` : content;
+
+        await updateTherapySession(params.sessionId as string, {
+          title,
+          summary: content,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to update session info:", error);
+    }
+  };
+
+  const fetchDrugInfo = async (drugName: string) => {
+    try {
+      console.log("Fetching drug info for:", drugName);
+      const url = `https://api.fda.gov/drug/label.json?search=(openfda.generic_name:"${drugName}" OR openfda.brand_name:"${drugName}" OR openfda.substance_name:"${drugName}")&limit=1`;
+      console.log("API URL:", url);
+
+      const response = await fetch(url);
+      const data = await response.json();
+      console.log("FDA API Response:", data);
+
+      if (data.error) {
+        console.error("FDA API Error:", data.error);
+        return null;
+      }
+
+      if (data.results?.[0]) {
+        const result = data.results[0];
+        const info = {
+          name: drugName,
+          warnings: result.warnings || [],
+          indications: result.indications_and_usage || [],
+          dosage: result.dosage_and_administration || [],
+          activeIngredients: result.active_ingredient || [],
+        };
+        console.log("Processed drug info:", info);
+        return info;
+      }
+
+      console.log("No results found for drug:", drugName);
+      return null;
+    } catch (error) {
+      console.error("Error fetching drug info:", error);
+      return null;
+    }
+  };
+
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100); // Small delay to ensure content is rendered
+    }
+  }, []);
+
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!isTyping) {
+      scrollToBottom();
+    }
+  }, [messages, isTyping, scrollToBottom]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || isTyping) return;
-    sendMessage(message);
-  };
+    if (!message.trim() || isTyping || !user?.id) return;
 
-  const sendMessage = (text: string) => {
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: "user",
-      content: text.trim(),
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    const userMessage = message.trim();
     setMessage("");
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
+    try {
+      // Save user message
+      const savedUserMsg = await saveChatMessage({
+        userId: user.id,
+        message: userMessage,
+        role: "user",
+        context: { sessionId: params.sessionId },
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: savedUserMsg[0].id,
+          role: "user",
+          content: userMessage,
+          timestamp: new Date(),
+        },
+      ]);
+
+      // Check for drug mentions (simplified example)
+      const drugMentionRegex =
+        /\b(aspirin|tylenol|advil|xanax|prozac|paracetamol|ibuprofen|acetaminophen|codeine|morphine|amoxicillin|penicillin)\b/gi;
+      const drugMatch = userMessage.match(drugMentionRegex);
+
+      if (drugMatch) {
+        setDrugPrompt({
+          drugName: drugMatch[0],
+          message: `I noticed you mentioned ${drugMatch[0]}. Would you like to learn more about this medication?`,
+        });
+      }
+
+      // Update session info with the message
+      await updateSessionInfo(userMessage);
+
+      // Make API call to AI service
+      const url = "https://autonome.alt.technology/auradev-mjbict/chat";
+      const username = "auradev";
+      const password = "GFtZoaBXRy";
+      const messageData = { message: userMessage };
+
+      const headers = new Headers({
+        "Content-Type": "application/json",
+        Authorization: "Basic " + btoa(`${username}:${password}`),
+      });
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: headers,
+        body: JSON.stringify(messageData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      let aiMessage: string;
+
+      if (data.response && Array.isArray(data.response)) {
+        aiMessage = data.response.join(" ");
+      } else {
+        throw new Error("Unexpected response format");
+      }
+
+      // console.log("aiMessage", aiMessage);
+
+      // Save AI response to database
+      const savedAiMsg = await saveChatMessage({
+        userId: user.id,
+        message: aiMessage,
         role: "assistant",
-        content:
-          "I understand how you're feeling. That must be challenging to deal with. Could you tell me more about what's been going through your mind?",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, aiMessage]);
+        context: { sessionId: params.sessionId },
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: savedAiMsg[0].id,
+          role: "assistant",
+          content: aiMessage,
+          timestamp: new Date(),
+        },
+      ]);
+
       setIsTyping(false);
-    }, 2000);
+      scrollToBottom(); // Add explicit scroll after message is added
+    } catch (error) {
+      console.error("Error in chat:", error);
+      // Add error message to the chat
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: "assistant",
+          content:
+            "I apologize, but I'm having trouble connecting right now. Please try again in a moment.",
+          timestamp: new Date(),
+        },
+      ]);
+    }
+  };
+
+  // Add function to create new session
+  const createNewSession = async () => {
+    if (!user?.id) return;
+
+    try {
+      const session = await createTherapySession({
+        userId: user.id,
+        type: "text",
+      });
+
+      router.push(`/therapy/${session[0].id}`);
+    } catch (error) {
+      console.error("Failed to create session:", error);
+    }
+  };
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Simple loading state
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  // Debug auth state
+  console.log("Therapy auth state:", { isAuthenticated, user, isLoading });
+
+  // Redirect if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">
+            Please sign in to continue
+          </h2>
+          <p className="text-muted-foreground">
+            You need to be authenticated to access therapy sessions.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Add drug info handlers
+  const handleDrugInfoRequest = async () => {
+    if (!drugPrompt) return;
+
+    console.log("Handling drug info request for:", drugPrompt.drugName);
+    const info = await fetchDrugInfo(drugPrompt.drugName);
+
+    if (info) {
+      console.log("Setting drug info:", info);
+      setDrugInfo(info);
+    } else {
+      // Add feedback for when no info is found
+      console.log("No drug info found");
+      // Optionally show an error message to the user
+      setDrugPrompt({
+        ...drugPrompt,
+        message: `Sorry, I couldn't find information about ${drugPrompt.drugName} in the FDA database.`,
+      });
+    }
   };
 
   return (
@@ -93,7 +378,7 @@ export default function TherapyPage() {
       <div className="flex h-[calc(100vh-4rem)] mt-20">
         {/* Left sidebar */}
         <div className="w-[280px] border-r shrink-0">
-          <SessionHistory />
+          <SessionHistory onNewSession={createNewSession} />
         </div>
 
         {/* Main chat area */}
@@ -193,7 +478,7 @@ export default function TherapyPage() {
                           {msg.role === "assistant" ? "AI Therapist" : "You"}
                         </p>
                         <div className="prose prose-sm dark:prose-invert leading-relaxed">
-                          {msg.content}
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
                         </div>
                       </div>
                     </motion.div>
@@ -279,6 +564,110 @@ export default function TherapyPage() {
           </div>
         </div>
       </div>
+
+      {/* Add Drug Information Prompt */}
+      {drugPrompt && (
+        <div className="fixed bottom-24 right-4 max-w-sm">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex justify-between items-start">
+                <div className="flex gap-2">
+                  <AlertCircle className="w-5 h-5 text-primary" />
+                  <CardTitle className="text-sm font-medium">
+                    Drug Information Available
+                  </CardTitle>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setDrugPrompt(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <CardDescription>{drugPrompt.message}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={handleDrugInfoRequest}
+                >
+                  Yes, show me
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDrugPrompt(null)}
+                >
+                  No, thanks
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Add Drug Information Display */}
+      {drugInfo && (
+        <div className="fixed inset-y-0 right-0 w-96 bg-background border-l shadow-lg p-4 overflow-y-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold capitalize">
+              {drugInfo.name}
+            </h3>
+            <Button variant="ghost" size="sm" onClick={() => setDrugInfo(null)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {drugInfo.activeIngredients &&
+            drugInfo.activeIngredients.length > 0 && (
+              <div className="mb-4">
+                <h4 className="font-medium mb-2">Active Ingredients</h4>
+                <ul className="list-disc pl-4 space-y-1 text-sm">
+                  {drugInfo.activeIngredients.map((ingredient, i) => (
+                    <li key={i}>{ingredient}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+          {drugInfo.indications && drugInfo.indications.length > 0 && (
+            <div className="mb-4">
+              <h4 className="font-medium mb-2">Uses</h4>
+              <ul className="list-disc pl-4 space-y-1 text-sm">
+                {drugInfo.indications.map((indication, i) => (
+                  <li key={i}>{indication}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {drugInfo.warnings && drugInfo.warnings.length > 0 && (
+            <div className="mb-4">
+              <h4 className="font-medium mb-2">Warnings</h4>
+              <ul className="list-disc pl-4 space-y-1 text-sm">
+                {drugInfo.warnings.map((warning, i) => (
+                  <li key={i}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {drugInfo.dosage && drugInfo.dosage.length > 0 && (
+            <div className="mb-4">
+              <h4 className="font-medium mb-2">Dosage & Administration</h4>
+              <ul className="list-disc pl-4 space-y-1 text-sm">
+                {drugInfo.dosage.map((dose, i) => (
+                  <li key={i}>{dose}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

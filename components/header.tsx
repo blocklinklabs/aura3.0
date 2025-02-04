@@ -13,15 +13,13 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./theme-toggle";
-import { useAuth } from "@/lib/context/auth-context";
+import { useAuth } from "@/lib/contexts/auth-context";
 import { LoginModal } from "@/components/auth/login-modal";
-import { useLocalStorage } from "@/lib/hooks/use-local-storage";
+import { SignInButton } from "@/components/auth/sign-in-button";
 
 export function Header() {
-  const { isAuthenticated, user, login, logout } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [hasVisited, setHasVisited] = useLocalStorage("has_visited", false);
 
   const navItems = [
     { href: "#features", label: "Features" },
@@ -29,14 +27,6 @@ export function Header() {
     { href: "#support", label: "Support" },
     { href: "#resources", label: "Resources" },
   ];
-
-  const handleLoginClick = () => {
-    if (!hasVisited) {
-      setShowLoginModal(true);
-    } else {
-      login();
-    }
-  };
 
   return (
     <div className="w-full fixed top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -76,7 +66,7 @@ export function Header() {
                     asChild
                     className="hidden md:flex gap-2 bg-primary/90 hover:bg-primary"
                   >
-                    <Link href="/chat">
+                    <Link href="/dashboard">
                       <MessageCircle className="w-4 h-4 mr-1" />
                       Start Chat
                     </Link>
@@ -91,14 +81,7 @@ export function Header() {
                   </Button>
                 </>
               ) : (
-                <Button
-                  variant="default"
-                  onClick={handleLoginClick}
-                  className="bg-primary/90 hover:bg-primary"
-                >
-                  <LogIn className="w-4 h-4 mr-2" />
-                  Sign in
-                </Button>
+                <SignInButton />
               )}
 
               <Button
@@ -145,11 +128,7 @@ export function Header() {
         )}
       </header>
 
-      <LoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLoginSuccess={() => setHasVisited(true)}
-      />
+      <LoginModal />
     </div>
   );
 }

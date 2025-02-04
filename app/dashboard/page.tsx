@@ -31,6 +31,7 @@ import {
   BrainCircuit,
   ArrowRight,
   X,
+  XCircle,
 } from "lucide-react";
 import {
   Card,
@@ -73,7 +74,8 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { addDays, format, subDays } from "date-fns";
-import { useAuth } from "@/lib/context/auth-context";
+import { useAuth } from "@/lib/contexts/auth-context";
+import Modal from "@/components/Modal";
 
 // Add this type definition
 type ActivityLevel = "none" | "low" | "medium" | "high";
@@ -129,11 +131,12 @@ const ContributionGraph = ({ data }: { data: DayActivity[] }) => {
 };
 
 export default function Dashboard() {
-  const { isLoading, user } = useAuth();
+  const { isLoading, user, isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [showModal, setShowModal] = useState(false);
 
   // New states for crisis management and interventions
   const [riskLevel, setRiskLevel] = useState<"low" | "medium" | "high">("low");
@@ -212,17 +215,12 @@ export default function Dashboard() {
   ]);
 
   // New states for activities and wearables
-  const [activities, setActivities] = useState([]);
-  const [wearableConnected, setWearableConnected] = useState(false);
-  const [healthMetrics, setHealthMetrics] = useState({
-    heartRate: null,
-    steps: null,
-    sleep: null,
-    lastSynced: null,
-  });
+  // const [activities, setActivities] = useState([]);
+  // const [wearableConnected, setWearableConnected] = useState(false);
+  // const [healthMetrics, setHealthMetrics] = useState({...});
 
   // Also add userId for the function call
-  const userId = "current-user-id"; // Replace this with actual user ID from your auth system
+  // const userId = "current-user-id"; // Replace this with actual user ID from your auth system
 
   // New states for mood tracking
   const [showMoodModal, setShowMoodModal] = useState(false);
@@ -272,10 +270,22 @@ export default function Dashboard() {
         // Clear the URL
         router.replace("/dashboard");
         // Update state to show connected
-        setWearableConnected(true);
+        // setWearableConnected(true);
       }
     }
   }, [router]);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      setShowModal(true);
+      // Redirect after a short delay to allow modal to be shown
+      const timeout = setTimeout(() => {
+        router.push("/");
+      }, 2000);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const moodHistory = [
     { day: "Mon", value: 65 },
@@ -334,25 +344,12 @@ export default function Dashboard() {
   ];
 
   // Fetch activities and health metrics
-  useEffect(() => {
-    if (mounted) {
-      fetchTodaysActivities();
-      fetchHealthMetrics();
-    }
-  }, [mounted]);
-
-  const fetchTodaysActivities = async () => {
-    const response = (await getTodaysActivities(userId)) as any;
-    setActivities(response);
-  };
-
-  const fetchHealthMetrics = async () => {
-    if (wearableConnected) {
-      // Fetch latest metrics from Fitbit
-      const metrics = (await getLatestHealthMetrics(userId)) as any;
-      setHealthMetrics(metrics);
-    }
-  };
+  // useEffect(() => {
+  //   if (mounted) {
+  //     fetchTodaysActivities();
+  //     fetchHealthMetrics();
+  //   }
+  // }, [mounted]);
 
   // Add these action handlers
   const handleStartTherapy = () => {
@@ -390,7 +387,7 @@ export default function Dashboard() {
         console.log(data);
       } else {
         // Handle error or token expiration
-        setWearableConnected(false);
+        // setWearableConnected(false);
         localStorage.removeItem("fitbit_token");
       }
     } catch (error) {
@@ -400,16 +397,35 @@ export default function Dashboard() {
 
   // Use the fetchFitbitData function when needed
   useEffect(() => {
-    if (wearableConnected) {
+    if (mounted) {
       fetchFitbitData();
     }
-  }, [wearableConnected]);
+  }, [mounted]);
 
-  // Add loading state
-  if (isLoading) {
+  // Simple loading state
+  if (!mounted) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  // Debug auth state
+  console.log("Auth state:", { isAuthenticated, user, isLoading });
+
+  // Redirect if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">
+            Please sign in to continue
+          </h2>
+          <p className="text-muted-foreground">
+            You need to be authenticated to view this page.
+          </p>
+        </div>
       </div>
     );
   }
