@@ -157,6 +157,10 @@ export async function createActivity({
       duration,
       moodScore,
       moodNote,
+      timestamp: new Date(),
+      completed: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
   } catch (error) {
     console.error("Error creating activity:", error);

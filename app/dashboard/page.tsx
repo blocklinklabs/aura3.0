@@ -458,10 +458,10 @@ export default function Dashboard() {
 
   // Load activities on mount and after new ones are logged
   useEffect(() => {
-    if (mounted && user?.id) {
+    if (user?.id) {
       loadActivities();
     }
-  }, [mounted, user?.id, loadActivities]);
+  }, [user?.id, loadActivities]);
 
   // Simple loading state
   if (!mounted) {
