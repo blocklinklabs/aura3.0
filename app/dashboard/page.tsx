@@ -441,7 +441,7 @@ export default function Dashboard() {
             className="space-y-2"
           >
             <h1 className="text-3xl font-bold text-foreground">
-              Welcome back, Sarah
+              Welcome back, {user?.name || "there"}
             </h1>
             <p className="text-muted-foreground">
               {currentTime.toLocaleDateString("en-US", {
