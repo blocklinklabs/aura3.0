@@ -74,7 +74,13 @@ import {
 } from "@/components/ui/dialog";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { addDays, format, subDays } from "date-fns";
+import {
+  addDays,
+  format,
+  subDays,
+  startOfDay,
+  isWithinInterval,
+} from "date-fns";
 import { useAuth } from "@/lib/contexts/auth-context";
 import Modal from "@/components/Modal";
 import { ActivityLogger } from "@/components/activities/activity-logger";
@@ -233,7 +239,7 @@ export default function Dashboard() {
   ]);
 
   // New states for activities and wearables
-  // const [activities, setActivities] = useState([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   // const [wearableConnected, setWearableConnected] = useState(false);
   // const [healthMetrics, setHealthMetrics] = useState({...});
 
@@ -245,42 +251,58 @@ export default function Dashboard() {
   const [showCheckInChat, setShowCheckInChat] = useState(false);
 
   // In your Dashboard component, add this state
-  const [activityHistory, setActivityHistory] = useState<DayActivity[]>(() => {
-    // Generate sample data for the last 28 days
-    return Array.from({ length: 28 }, (_, i) => ({
-      date: subDays(new Date(), 27 - i),
-      level: ["none", "low", "medium", "high"][
-        Math.floor(Math.random() * 4)
-      ] as ActivityLevel,
-      activities: Array.from(
-        { length: Math.floor(Math.random() * 5) },
-        (_, j) => ({
-          type: ["meditation", "exercise", "therapy", "journaling"][
-            Math.floor(Math.random() * 4)
-          ],
-          name: [
-            "Morning Meditation",
-            "Evening Walk",
-            "Therapy Session",
-            "Daily Journal",
-          ][Math.floor(Math.random() * 4)],
-          completed: Math.random() > 0.3,
-          time: format(addDays(new Date(), j), "h:mm a"),
-        })
-      ),
-    }));
-  });
+  const [activityHistory, setActivityHistory] = useState<DayActivity[]>([]);
 
   // Add state for activity logger
   const [showActivityLogger, setShowActivityLogger] = useState(false);
-  const [activities, setActivities] = useState<Activity[]>([]);
 
-  // Add function to load activities
+  // Add this function to transform activities into day activity format
+  const transformActivitiesToDayActivity = (
+    activities: Activity[]
+  ): DayActivity[] => {
+    const days: DayActivity[] = [];
+    const today = new Date();
+
+    // Create array for last 28 days
+    for (let i = 27; i >= 0; i--) {
+      const date = startOfDay(subDays(today, i));
+      const dayActivities = activities.filter((activity) =>
+        isWithinInterval(new Date(activity.timestamp), {
+          start: date,
+          end: addDays(date, 1),
+        })
+      );
+
+      // Determine activity level based on number of activities
+      let level: ActivityLevel = "none";
+      if (dayActivities.length > 0) {
+        if (dayActivities.length <= 2) level = "low";
+        else if (dayActivities.length <= 4) level = "medium";
+        else level = "high";
+      }
+
+      days.push({
+        date,
+        level,
+        activities: dayActivities.map((activity) => ({
+          type: activity.type,
+          name: activity.name,
+          completed: activity.completed,
+          time: format(new Date(activity.timestamp), "h:mm a"),
+        })),
+      });
+    }
+
+    return days;
+  };
+
+  // Modify the loadActivities function to update activityHistory
   const loadActivities = useCallback(async () => {
     if (!user?.id) return;
     try {
       const userActivities = await getUserActivities(user.id);
       setActivities(userActivities);
+      setActivityHistory(transformActivitiesToDayActivity(userActivities));
     } catch (error) {
       console.error("Error loading activities:", error);
     }
