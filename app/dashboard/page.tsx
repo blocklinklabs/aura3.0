@@ -164,6 +164,179 @@ const ContributionGraph = ({ data }: { data: DayActivity[] }) => {
   );
 };
 
+// Add these helper functions at the top of the file
+const calculateDailyStats = (activities: Activity[]) => {
+  const today = startOfDay(new Date());
+  const todaysActivities = activities.filter((activity) =>
+    isWithinInterval(new Date(activity.timestamp), {
+      start: today,
+      end: addDays(today, 1),
+    })
+  );
+
+  // Calculate mood score (average of today's mood entries)
+  const moodEntries = todaysActivities.filter(
+    (a) => a.type === "mood" && a.moodScore !== null
+  );
+  const averageMood =
+    moodEntries.length > 0
+      ? Math.round(
+          moodEntries.reduce((acc, curr) => acc + (curr.moodScore || 0), 0) /
+            moodEntries.length
+        )
+      : null;
+
+  // Calculate completion rate
+  const completedActivities = todaysActivities.filter(
+    (a) => a.completed
+  ).length;
+  const completionRate =
+    todaysActivities.length > 0
+      ? Math.round((completedActivities / todaysActivities.length) * 100)
+      : 0;
+
+  // Count mindfulness activities (games, meditation, etc.)
+  const mindfulnessActivities = todaysActivities.filter((a) =>
+    ["game", "meditation", "breathing"].includes(a.type)
+  ).length;
+
+  return {
+    moodScore: averageMood,
+    completionRate,
+    mindfulnessCount: mindfulnessActivities,
+    totalActivities: todaysActivities.length,
+  };
+};
+
+// Add this helper function to generate AI insights
+const generateAIInsights = (activities: Activity[]) => {
+  const insights: {
+    title: string;
+    description: string;
+    icon: any;
+    priority: "low" | "medium" | "high";
+  }[] = [];
+
+  // Get activities from last 7 days
+  const lastWeek = subDays(new Date(), 7);
+  const recentActivities = activities.filter(
+    (a) => new Date(a.timestamp) >= lastWeek
+  );
+
+  // Analyze mood patterns
+  const moodEntries = recentActivities.filter(
+    (a) => a.type === "mood" && a.moodScore !== null
+  );
+  if (moodEntries.length >= 2) {
+    const averageMood =
+      moodEntries.reduce((acc, curr) => acc + (curr.moodScore || 0), 0) /
+      moodEntries.length;
+    const latestMood = moodEntries[moodEntries.length - 1].moodScore || 0;
+
+    if (latestMood > averageMood) {
+      insights.push({
+        title: "Mood Improvement",
+        description:
+          "Your recent mood scores are above your weekly average. Keep up the good work!",
+        icon: Brain,
+        priority: "high",
+      });
+    } else if (latestMood < averageMood - 20) {
+      insights.push({
+        title: "Mood Change Detected",
+        description:
+          "I've noticed a dip in your mood. Would you like to try some mood-lifting activities?",
+        icon: Heart,
+        priority: "high",
+      });
+    }
+  }
+
+  // Analyze activity patterns
+  const mindfulnessActivities = recentActivities.filter((a) =>
+    ["game", "meditation", "breathing"].includes(a.type)
+  );
+  if (mindfulnessActivities.length > 0) {
+    const dailyAverage = mindfulnessActivities.length / 7;
+    if (dailyAverage >= 1) {
+      insights.push({
+        title: "Consistent Practice",
+        description: `You've been regularly engaging in mindfulness activities. This can help reduce stress and improve focus.`,
+        icon: Trophy,
+        priority: "medium",
+      });
+    } else {
+      insights.push({
+        title: "Mindfulness Opportunity",
+        description:
+          "Try incorporating more mindfulness activities into your daily routine.",
+        icon: Sparkles,
+        priority: "low",
+      });
+    }
+  }
+
+  // Check activity completion rate
+  const completedActivities = recentActivities.filter((a) => a.completed);
+  const completionRate =
+    recentActivities.length > 0
+      ? (completedActivities.length / recentActivities.length) * 100
+      : 0;
+
+  if (completionRate >= 80) {
+    insights.push({
+      title: "High Achievement",
+      description: `You've completed ${Math.round(
+        completionRate
+      )}% of your activities this week. Excellent commitment!`,
+      icon: Trophy,
+      priority: "high",
+    });
+  } else if (completionRate < 50) {
+    insights.push({
+      title: "Activity Reminder",
+      description:
+        "You might benefit from setting smaller, more achievable daily goals.",
+      icon: Calendar,
+      priority: "medium",
+    });
+  }
+
+  // Time pattern analysis
+  const morningActivities = recentActivities.filter(
+    (a) => new Date(a.timestamp).getHours() < 12
+  );
+  const eveningActivities = recentActivities.filter(
+    (a) => new Date(a.timestamp).getHours() >= 18
+  );
+
+  if (morningActivities.length > eveningActivities.length) {
+    insights.push({
+      title: "Morning Person",
+      description:
+        "You're most active in the mornings. Consider scheduling important tasks during your peak hours.",
+      icon: Sun,
+      priority: "medium",
+    });
+  } else if (eveningActivities.length > morningActivities.length) {
+    insights.push({
+      title: "Evening Routine",
+      description:
+        "You tend to be more active in the evenings. Make sure to wind down before bedtime.",
+      icon: Moon,
+      priority: "medium",
+    });
+  }
+
+  // Sort insights by priority and return top 3
+  return insights
+    .sort((a, b) => {
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    })
+    .slice(0, 3);
+};
+
 export default function Dashboard() {
   const { isLoading, user, isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
@@ -213,20 +386,14 @@ export default function Dashboard() {
   ];
 
   // AI Insights
-  const aiInsights = [
+  const [aiInsights, setAiInsights] = useState<
     {
-      title: "Sleep Pattern Improvement",
-      description:
-        "Your sleep quality has improved by 15% this week. Keep maintaining your bedtime routine!",
-      icon: Moon,
-    },
-    {
-      title: "Mood Pattern Detected",
-      description:
-        "I notice your mood tends to dip in the evenings. Would you like to schedule an evening check-in?",
-      icon: Brain,
-    },
-  ];
+      title: string;
+      description: string;
+      icon: any;
+      priority: "low" | "medium" | "high";
+    }[]
+  >([]);
 
   // New states for chat and IoT
   const [messages, setMessages] = useState([
@@ -269,6 +436,14 @@ export default function Dashboard() {
   // Add new state for loading
   const [isSavingActivity, setIsSavingActivity] = useState(false);
   const [isSavingMood, setIsSavingMood] = useState(false);
+
+  // Add this state for today's stats
+  const [todayStats, setTodayStats] = useState({
+    moodScore: null as number | null,
+    completionRate: 0,
+    mindfulnessCount: 0,
+    totalActivities: 0,
+  });
 
   // Add this function to transform activities into day activity format
   const transformActivitiesToDayActivity = (
@@ -381,36 +556,55 @@ export default function Dashboard() {
     },
   ];
 
+  // Add this effect to update stats when activities change
+  useEffect(() => {
+    if (activities.length > 0) {
+      setTodayStats(calculateDailyStats(activities));
+    }
+  }, [activities]);
+
+  // Replace the existing wellnessStats array with this dynamic version
   const wellnessStats = [
     {
       title: "Mood Score",
-      value: "85%",
+      value: todayStats.moodScore ? `${todayStats.moodScore}%` : "No data",
       icon: Brain,
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
+      description: "Today's average mood",
     },
     {
-      title: "Sleep Quality",
-      value: "7.5hrs",
-      icon: Moon,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
-    },
-    {
-      title: "Mindfulness",
-      value: "12 days",
-      icon: Heart,
-      color: "text-rose-500",
-      bgColor: "bg-rose-500/10",
-    },
-    {
-      title: "Goals Met",
-      value: "8/10",
+      title: "Completion Rate",
+      value: `${todayStats.completionRate}%`,
       icon: Trophy,
       color: "text-yellow-500",
       bgColor: "bg-yellow-500/10",
+      description: "Activities completed",
+    },
+    {
+      title: "Mindfulness",
+      value: `${todayStats.mindfulnessCount} sessions`,
+      icon: Heart,
+      color: "text-rose-500",
+      bgColor: "bg-rose-500/10",
+      description: "Mindfulness activities",
+    },
+    {
+      title: "Total Activities",
+      value: todayStats.totalActivities.toString(),
+      icon: Activity,
+      color: "text-blue-500",
+      bgColor: "bg-blue-500/10",
+      description: "Planned for today",
     },
   ];
+
+  // Add this effect to update insights when activities change
+  useEffect(() => {
+    if (activities.length > 0) {
+      setAiInsights(generateAIInsights(activities));
+    }
+  }, [activities]);
 
   // Fetch activities and health metrics
   // useEffect(() => {
@@ -691,52 +885,80 @@ export default function Dashboard() {
 
             {/* Today's Overview Card */}
             <Card className="border-primary/10">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">Today's Overview</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {wellnessStats.map((stat) => (
-                      <div
-                        key={stat.title}
-                        className={cn(
-                          "p-3 rounded-lg transition-all duration-200",
-                          stat.bgColor,
-                          "hover:scale-[1.02]"
-                        )}
-                      >
-                        <stat.icon className={`w-5 h-5 ${stat.color} mb-2`} />
-                        <p className="text-sm text-muted-foreground">
-                          {stat.title}
-                        </p>
-                        <p className="text-xl font-bold">{stat.value}</p>
+              <CardHeader>
+                <CardTitle>Today's Overview</CardTitle>
+                <CardDescription>
+                  Your wellness metrics for {format(new Date(), "MMMM d, yyyy")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-3">
+                  {wellnessStats.map((stat, index) => (
+                    <div
+                      key={stat.title}
+                      className={cn(
+                        "p-4 rounded-lg transition-all duration-200 hover:scale-[1.02]",
+                        stat.bgColor
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <stat.icon className={cn("w-5 h-5", stat.color)} />
+                        <p className="text-sm font-medium">{stat.title}</p>
                       </div>
-                    ))}
-                  </div>
+                      <p className="text-2xl font-bold mt-2">{stat.value}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {stat.description}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
 
             {/* AI Insights Card */}
             <Card className="border-primary/10">
-              <CardContent className="p-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BrainCircuit className="w-5 h-5 text-primary" />
+                  AI Insights
+                </CardTitle>
+                <CardDescription>
+                  Personalized recommendations based on your activity patterns
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-4">
-                  <h3 className="font-semibold text-lg">AI Insights</h3>
-                  <div className="space-y-3">
-                    {aiInsights.map((insight, index) => (
+                  {aiInsights.length > 0 ? (
+                    aiInsights.map((insight, index) => (
                       <div
                         key={index}
-                        className="p-3 rounded-lg bg-primary/5 space-y-2"
+                        className={cn(
+                          "p-4 rounded-lg space-y-2 transition-all hover:scale-[1.02]",
+                          insight.priority === "high"
+                            ? "bg-primary/10"
+                            : insight.priority === "medium"
+                            ? "bg-primary/5"
+                            : "bg-muted"
+                        )}
                       >
                         <div className="flex items-center gap-2">
-                          <insight.icon className="w-4 h-4 text-primary" />
-                          <p className="font-medium text-sm">{insight.title}</p>
+                          <insight.icon className="w-5 h-5 text-primary" />
+                          <p className="font-medium">{insight.title}</p>
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {insight.description}
                         </p>
                       </div>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    <div className="text-center text-muted-foreground py-8">
+                      <Activity className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                      <p>
+                        Complete more activities to receive personalized
+                        insights
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
