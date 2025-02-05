@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Brain,
@@ -61,6 +61,7 @@ import {
   getTodaysActivities,
   updateActivityStatus,
   getLatestHealthMetrics,
+  getUserActivities,
 } from "@/lib/db/actions";
 import { StartSessionModal } from "@/components/therapy/start-session-modal";
 import { SessionHistory } from "@/components/therapy/session-history";
@@ -76,6 +77,7 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { addDays, format, subDays } from "date-fns";
 import { useAuth } from "@/lib/contexts/auth-context";
 import Modal from "@/components/Modal";
+import { ActivityLogger } from "@/components/activities/activity-logger";
 
 // Add this type definition
 type ActivityLevel = "none" | "low" | "medium" | "high";
@@ -89,6 +91,22 @@ interface DayActivity {
     completed: boolean;
     time?: string;
   }[];
+}
+
+// Add this interface near the top with other interfaces
+interface Activity {
+  id: string;
+  userId: string | null;
+  type: string;
+  name: string;
+  description: string | null;
+  timestamp: Date;
+  duration: number | null;
+  completed: boolean;
+  moodScore: number | null;
+  moodNote: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Add this component for the contribution graph
@@ -253,6 +271,21 @@ export default function Dashboard() {
     }));
   });
 
+  // Add state for activity logger
+  const [showActivityLogger, setShowActivityLogger] = useState(false);
+  const [activities, setActivities] = useState<Activity[]>([]);
+
+  // Add function to load activities
+  const loadActivities = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const userActivities = await getUserActivities(user.id);
+      setActivities(userActivities);
+    } catch (error) {
+      console.error("Error loading activities:", error);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     setMounted(true);
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -362,8 +395,7 @@ export default function Dashboard() {
   };
 
   const handleAICheckIn = () => {
-    // This could open the chat with a specific AI check-in flow
-    setShowCheckInChat(true);
+    setShowActivityLogger(true);
   };
 
   // Function to fetch Fitbit data
@@ -401,6 +433,13 @@ export default function Dashboard() {
       fetchFitbitData();
     }
   }, [mounted]);
+
+  // Load activities on mount and after new ones are logged
+  useEffect(() => {
+    if (mounted && user?.id) {
+      loadActivities();
+    }
+  }, [mounted, user?.id, loadActivities]);
 
   // Simple loading state
   if (!mounted) {
@@ -796,6 +835,12 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <ActivityLogger
+        open={showActivityLogger}
+        onOpenChange={setShowActivityLogger}
+        onActivityLogged={loadActivities}
+      />
     </div>
   );
 }

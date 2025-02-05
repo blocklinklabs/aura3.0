@@ -133,23 +133,35 @@ export async function connectWearableDevice({
 // Activity Management
 export async function createActivity({
   userId,
-  sessionId,
-  activityData,
+  type,
+  name,
+  description,
+  duration,
+  moodScore,
+  moodNote,
 }: {
   userId: string;
-  sessionId?: string;
-  activityData: Partial<typeof activities.$inferInsert>;
+  type: string;
+  name: string;
+  description?: string;
+  duration?: number;
+  moodScore?: number;
+  moodNote?: string;
 }) {
-  const values = {
-    userId,
-    sessionId,
-    title: activityData.title || "Untitled Activity",
-    type: activityData.type || "general",
-    status: activityData.status || "pending",
-    ...activityData,
-  };
-
-  return await db.insert(activities).values(values).returning();
+  try {
+    return await db.insert(activities).values({
+      userId,
+      type,
+      name,
+      description,
+      duration,
+      moodScore,
+      moodNote,
+    });
+  } catch (error) {
+    console.error("Error creating activity:", error);
+    throw error;
+  }
 }
 
 export async function updateActivityStatus({
@@ -278,6 +290,24 @@ export async function getSessionChatHistory(sessionId: string) {
       .orderBy(chatHistory.timestamp);
   } catch (error) {
     console.error("Error getting session chat history:", error);
+    throw error;
+  }
+}
+
+export async function getUserActivities(userId: string, days: number = 7) {
+  try {
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - days);
+
+    return await db
+      .select()
+      .from(activities)
+      .where(
+        and(eq(activities.userId, userId), gte(activities.timestamp, daysAgo))
+      )
+      .orderBy(desc(activities.timestamp));
+  } catch (error) {
+    console.error("Error getting user activities:", error);
     throw error;
   }
 }

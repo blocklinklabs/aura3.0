@@ -106,16 +106,16 @@ export const wearableMetrics = pgTable("wearable_metrics", {
 export const activities = pgTable("activities", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").references(() => users.id),
-  sessionId: uuid("session_id").references(() => therapySessions.id),
-  title: text("title").notNull(),
+  type: text("type").notNull(), // 'mood', 'meditation', 'exercise', 'therapy', etc.
+  name: text("name").notNull(),
   description: text("description"),
-  type: text("type").notNull(), // meditation, exercise, journaling, etc.
-  status: text("status").notNull(), // pending, completed, skipped
-  scheduledFor: timestamp("scheduled_for"),
-  completedAt: timestamp("completed_at"),
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
   duration: integer("duration"), // in minutes
-  recurrence: jsonb("recurrence"), // for recurring activities
-  metadata: jsonb("metadata"), // additional activity-specific data
+  completed: boolean("completed").notNull().default(false),
+  moodScore: integer("mood_score"), // 1-100 if type is 'mood'
+  moodNote: text("mood_note"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 // Activity Progress
