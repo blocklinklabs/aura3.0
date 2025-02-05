@@ -200,7 +200,7 @@ export default function TherapyPage() {
     if (messagesEndRef.current) {
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 100); // Small delay to ensure content is rendered
+      }, 100);
     }
   }, []);
 
