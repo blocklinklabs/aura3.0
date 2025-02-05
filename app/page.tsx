@@ -119,23 +119,6 @@ export default function Home() {
         </div>
         <Ripple className="opacity-60" />
 
-        {/* Floating elements */}
-        {/* <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute animate-float"
-              style={{
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-              }}
-            >
-              <div className="w-8 h-8 rounded-full bg-primary/10 backdrop-blur-sm" />
-            </div>
-          ))}
-        </div> */}
-
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: mounted ? 1 : 0, y: mounted ? 0 : 20 }}
@@ -261,12 +244,7 @@ export default function Home() {
         {/* <div className="absolute inset-0 bg-gradient-to-b from-background via-background/50 to-background" /> */}
 
         <div className="max-w-6xl mx-auto">
-          <motion.div
-            // initial={{ opacity: 1 }}
-            // whileInView={{ opacity: 1 }}
-            // transition={{ duration: 1 }}
-            className="text-center mb-16 space-y-4 text-white "
-          >
+          <motion.div className="text-center mb-16 space-y-4 text-white ">
             <h2 className="text-3xl font-bold bg-gradient-to-r from-primary/90 to-primary bg-clip-text text-transparent dark:text-primary/90">
               How Nova Helps You
             </h2>
