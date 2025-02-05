@@ -62,7 +62,11 @@ const games = [
   },
 ];
 
-export function AnxietyGames() {
+interface AnxietyGamesProps {
+  onGamePlayed?: (gameName: string, description: string) => Promise<void>;
+}
+
+export const AnxietyGames = ({ onGamePlayed }: AnxietyGamesProps) => {
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [showGame, setShowGame] = useState(false);
   const nova = useNovaAgent();
@@ -71,6 +75,18 @@ export function AnxietyGames() {
     setSelectedGame(gameId);
     setShowGame(true);
     await nova.suggestIntervention();
+
+    // Log the activity
+    if (onGamePlayed) {
+      try {
+        await onGamePlayed(
+          gameId,
+          games.find((g) => g.id === gameId)?.description || ""
+        );
+      } catch (error) {
+        console.error("Error logging game activity:", error);
+      }
+    }
   };
 
   const renderGame = () => {
@@ -163,4 +179,4 @@ export function AnxietyGames() {
       </Dialog>
     </>
   );
-}
+};

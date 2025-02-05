@@ -339,3 +339,18 @@ export async function saveMoodData({
     updatedAt: new Date(),
   });
 }
+
+export async function logActivity(data: {
+  userId: string;
+  type: string;
+  name: string;
+  description: string | null;
+  completed: boolean;
+  duration: number | null;
+  moodScore: number | null;
+  moodNote: string | null;
+}) {
+  // Your database insertion logic here
+  // This should insert the activity into your database
+  // Return the created activity
+}

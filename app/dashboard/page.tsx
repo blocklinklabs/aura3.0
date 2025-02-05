@@ -64,6 +64,7 @@ import {
   getLatestHealthMetrics,
   getUserActivities,
   saveMoodData,
+  logActivity,
 } from "@/lib/db/actions";
 import { StartSessionModal } from "@/components/therapy/start-session-modal";
 import { SessionHistory } from "@/components/therapy/session-history";
@@ -115,6 +116,13 @@ interface Activity {
   moodNote: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Add this interface near other interfaces
+interface GameActivity {
+  name: string;
+  type: "game";
+  description: string;
 }
 
 // Add this component for the contribution graph
@@ -480,6 +488,32 @@ export default function Dashboard() {
     }
   }, [user?.id, loadActivities]);
 
+  // Add this handler for game activities
+  const handleGamePlayed = useCallback(
+    async (gameName: string, description: string) => {
+      if (!user?.id) return;
+
+      try {
+        await logActivity({
+          userId: user.id,
+          type: "game",
+          name: gameName,
+          description: description,
+          completed: true,
+          duration: null, // Games typically don't have fixed durations
+          moodScore: null,
+          moodNote: null,
+        });
+
+        // Refresh activities after logging
+        loadActivities();
+      } catch (error) {
+        console.error("Error logging game activity:", error);
+      }
+    },
+    [user?.id, loadActivities]
+  );
+
   // Simple loading state
   if (!mounted) {
     return (
@@ -643,7 +677,7 @@ export default function Dashboard() {
                           <BrainCircuit className="w-5 h-5 text-blue-500" />
                         </div>
                         <div>
-                          <div className="font-medium text-sm">AI Check-in</div>
+                          <div className="font-medium text-sm">Check-in</div>
                           <div className="text-xs text-muted-foreground mt-0.5">
                             Quick wellness check
                           </div>
@@ -758,7 +792,7 @@ export default function Dashboard() {
               </Card>
 
               {/* Anxiety Games - Now directly below Fitbit */}
-              <AnxietyGames />
+              <AnxietyGames onGamePlayed={handleGamePlayed} />
             </div>
 
             {/* Right Column - Activities */}
