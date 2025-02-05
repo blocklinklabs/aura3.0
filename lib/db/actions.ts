@@ -315,3 +315,27 @@ export async function getUserActivities(userId: string, days: number = 7) {
     throw error;
   }
 }
+
+// Add this function to save mood data
+export async function saveMoodData({
+  userId,
+  mood,
+  note,
+}: {
+  userId: string;
+  mood: number;
+  note: string;
+}) {
+  return await db.insert(activities).values({
+    userId,
+    type: "mood",
+    name: "Mood Entry",
+    description: note,
+    moodScore: mood,
+    moodNote: note,
+    timestamp: new Date(),
+    completed: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+}

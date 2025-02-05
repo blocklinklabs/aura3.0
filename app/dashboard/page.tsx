@@ -32,6 +32,7 @@ import {
   ArrowRight,
   X,
   XCircle,
+  Loader2,
 } from "lucide-react";
 import {
   Card,
@@ -62,6 +63,7 @@ import {
   updateActivityStatus,
   getLatestHealthMetrics,
   getUserActivities,
+  saveMoodData,
 } from "@/lib/db/actions";
 import { StartSessionModal } from "@/components/therapy/start-session-modal";
 import { SessionHistory } from "@/components/therapy/session-history";
@@ -256,6 +258,10 @@ export default function Dashboard() {
   // Add state for activity logger
   const [showActivityLogger, setShowActivityLogger] = useState(false);
 
+  // Add new state for loading
+  const [isSavingActivity, setIsSavingActivity] = useState(false);
+  const [isSavingMood, setIsSavingMood] = useState(false);
+
   // Add this function to transform activities into day activity format
   const transformActivitiesToDayActivity = (
     activities: Activity[]
@@ -411,9 +417,17 @@ export default function Dashboard() {
     router.push("/therapy/new");
   };
 
-  const handleMoodEntry = () => {
-    // You can either use a modal or redirect to a mood entry page
-    setShowMoodModal(true);
+  const handleMoodSubmit = async (moodData: any) => {
+    setIsSavingMood(true);
+    try {
+      // Your mood saving logic here
+      await saveMoodData(moodData);
+      setShowMoodModal(false);
+    } catch (error) {
+      console.error("Error saving mood:", error);
+    } finally {
+      setIsSavingMood(false);
+    }
   };
 
   const handleAICheckIn = () => {
@@ -472,8 +486,13 @@ export default function Dashboard() {
     );
   }
 
-  // Debug auth state
-  console.log("Auth state:", { isAuthenticated, user, isLoading });
+  // Remove or modify the debug console.log
+  // Instead of constant logging, we can log only when auth state changes
+  // useEffect(() => {
+  //   if (process.env.NODE_ENV === "development") {
+  //     console.log("Auth state changed:", { isAuthenticated, user, isLoading });
+  //   }
+  // }, [isAuthenticated, user, isLoading]);
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
@@ -595,7 +614,7 @@ export default function Dashboard() {
                           "justify-center items-center text-center",
                           "transition-all duration-200 group-hover:translate-y-[-2px]"
                         )}
-                        onClick={handleMoodEntry}
+                        onClick={() => setShowMoodModal(true)}
                       >
                         <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center mb-2">
                           <Heart className="w-5 h-5 text-rose-500" />
@@ -830,7 +849,7 @@ export default function Dashboard() {
                 Track your mood to get personalized insights and support.
               </DialogDescription>
             </DialogHeader>
-            <MoodForm onSubmit={() => setShowMoodModal(false)} />
+            <MoodForm onSubmit={handleMoodSubmit} isLoading={isSavingMood} />
           </DialogContent>
         </Dialog>
       )}

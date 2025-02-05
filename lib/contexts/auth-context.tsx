@@ -49,12 +49,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Update the authentication effect
   useEffect(() => {
+    let isSubscribed = true; // Add cleanup flag
+
     const handleAuthChange = async () => {
-      const walletAddress = privyUser?.wallet?.address;
-      if (authenticated && walletAddress) {
+      // Skip if already loading or no change in auth state
+      if (!isSubscribed || !privyUser?.wallet?.address) return;
+
+      const walletAddress = privyUser.wallet.address;
+
+      // Only proceed if authenticated and wallet address changed
+      if (authenticated && walletAddress !== state.user?.walletAddress) {
         setState((s) => ({ ...s, isLoading: true }));
         try {
           const response = await fetch(`/api/users?walletId=${walletAddress}`);
+
+          if (!isSubscribed) return; // Check if still subscribed before updating state
 
           if (response.ok) {
             const { user } = await response.json();
@@ -80,10 +89,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }));
           }
         } catch (error) {
+          if (!isSubscribed) return;
           console.error("Error checking user:", error);
           setState((s) => ({ ...s, isLoading: false }));
         }
-      } else {
+      } else if (!authenticated) {
         setState((s) => ({
           ...s,
           isAuthenticated: false,
@@ -94,7 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     handleAuthChange();
-  }, [authenticated, privyUser?.wallet?.address]);
+
+    // Cleanup function
+    return () => {
+      isSubscribed = false;
+    };
+  }, [authenticated, privyUser?.wallet?.address]); // Only depend on these values
 
   const login = async () => {
     setState((s) => ({ ...s, showLoginModal: true }));

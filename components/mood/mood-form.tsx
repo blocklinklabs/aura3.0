@@ -12,11 +12,12 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
-import { Plus } from "lucide-react";
+import { Plus, Loader2 } from "lucide-react";
 import { useNovaAgent } from "@/lib/agents/nova.agent";
 
 interface MoodFormProps {
-  onSubmit: () => void;
+  onSubmit: (data: any) => Promise<void>;
+  isLoading: boolean;
 }
 
 const emotions = [
@@ -27,7 +28,7 @@ const emotions = [
   { value: 100, label: "✨ Excited", color: "from-pink-500/50" },
 ];
 
-export function MoodForm({ onSubmit }: MoodFormProps) {
+export function MoodForm({ onSubmit, isLoading }: MoodFormProps) {
   const [open, setOpen] = useState(false);
   const [mood, setMood] = useState(50);
   const [note, setNote] = useState("");
@@ -36,25 +37,29 @@ export function MoodForm({ onSubmit }: MoodFormProps) {
   const currentEmotion =
     emotions.find((em) => Math.abs(mood - em.value) < 15) || emotions[2];
 
-  const handleSubmit = async () => {
-    // Trigger AI analysis
-    await nova.analyzeMood(mood, note);
+  const handleSubmit =
+    async (onSubmit: (data: any) => Promise<void>) =>
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      // Trigger AI analysis
+      await nova.analyzeMood(mood, note);
 
-    // Handle high-risk situations
-    if (mood < 20) {
-      await nova.handleCrisis();
-    }
+      // Handle high-risk situations
+      if (mood < 20) {
+        await nova.handleCrisis();
+      }
 
-    // Get AI suggestions
-    const suggestions = nova.suggestions;
-    if (suggestions.length > 0) {
-      // Implement suggestion UI (could be a toast notification)
-      console.log("AI Suggestions:", suggestions);
-    }
+      // Get AI suggestions
+      const suggestions = nova.suggestions;
+      if (suggestions.length > 0) {
+        // Implement suggestion UI (could be a toast notification)
+        console.log("AI Suggestions:", suggestions);
+      }
 
-    setOpen(false);
-    setNote("");
-  };
+      await onSubmit({ mood, note });
+      setOpen(false);
+      setNote("");
+    };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -115,7 +120,16 @@ export function MoodForm({ onSubmit }: MoodFormProps) {
           </div>
 
           <div className="flex justify-end">
-            <Button onClick={handleSubmit}>Save Entry</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving Mood...
+                </>
+              ) : (
+                "Save Mood"
+              )}
+            </Button>
           </div>
         </div>
       </DialogContent>

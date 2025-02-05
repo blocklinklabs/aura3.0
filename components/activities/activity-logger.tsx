@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,7 @@ const activityTypes = [
 interface ActivityLoggerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onActivityLogged?: () => void;
+  onActivityLogged: () => void;
 }
 
 export function ActivityLogger({
@@ -42,6 +43,7 @@ export function ActivityLogger({
   onOpenChange,
   onActivityLogged,
 }: ActivityLoggerProps) {
+  const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
   const [type, setType] = useState("");
   const [name, setName] = useState("");
@@ -51,7 +53,7 @@ export function ActivityLogger({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id || !type || !name) return;
-
+    setIsLoading(true);
     try {
       await createActivity({
         userId: user.id,
@@ -67,10 +69,12 @@ export function ActivityLogger({
       setDuration("");
       setDescription("");
 
+      onActivityLogged();
       onOpenChange(false);
-      onActivityLogged?.();
     } catch (error) {
       console.error("Error logging activity:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -78,7 +82,8 @@ export function ActivityLogger({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Log New Activity</DialogTitle>
+          <DialogTitle>Log Activity</DialogTitle>
+          <DialogDescription>Record your wellness activity</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -133,7 +138,16 @@ export function ActivityLogger({
             >
               Cancel
             </Button>
-            <Button type="submit">Save Activity</Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Activity"
+              )}
+            </Button>
           </div>
         </form>
       </DialogContent>
