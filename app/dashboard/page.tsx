@@ -417,11 +417,14 @@ export default function Dashboard() {
     router.push("/therapy/new");
   };
 
-  const handleMoodSubmit = async (moodData: any) => {
+  const handleMoodSubmit = async (data: { moodScore: number }) => {
     setIsSavingMood(true);
     try {
-      // Your mood saving logic here
-      await saveMoodData(moodData);
+      await saveMoodData({
+        userId: user?.id as string,
+        mood: data.moodScore,
+        note: "",
+      });
       setShowMoodModal(false);
     } catch (error) {
       console.error("Error saving mood:", error);
@@ -840,19 +843,17 @@ export default function Dashboard() {
       <FixedChat />
 
       {/* Mood tracking modal */}
-      {showMoodModal && (
-        <Dialog open={showMoodModal} onOpenChange={setShowMoodModal}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>How are you feeling?</DialogTitle>
-              <DialogDescription>
-                Track your mood to get personalized insights and support.
-              </DialogDescription>
-            </DialogHeader>
-            <MoodForm onSubmit={handleMoodSubmit} isLoading={isSavingMood} />
-          </DialogContent>
-        </Dialog>
-      )}
+      <Dialog open={showMoodModal} onOpenChange={setShowMoodModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>How are you feeling?</DialogTitle>
+            <DialogDescription>
+              Move the slider to track your current mood
+            </DialogDescription>
+          </DialogHeader>
+          <MoodForm onSubmit={handleMoodSubmit} isLoading={isSavingMood} />
+        </DialogContent>
+      </Dialog>
 
       {/* AI check-in chat */}
       {showCheckInChat && (

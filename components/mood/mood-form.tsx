@@ -1,138 +1,82 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Loader2 } from "lucide-react";
-import { useNovaAgent } from "@/lib/agents/nova.agent";
+import { Loader2 } from "lucide-react";
 
 interface MoodFormProps {
-  onSubmit: (data: any) => Promise<void>;
-  isLoading: boolean;
+  onSubmit: (data: { moodScore: number }) => Promise<void>;
+  isLoading?: boolean;
 }
 
-const emotions = [
-  { value: 0, label: "😔 Down", color: "from-blue-500/50" },
-  { value: 25, label: "😊 Content", color: "from-green-500/50" },
-  { value: 50, label: "😌 Peaceful", color: "from-purple-500/50" },
-  { value: 75, label: "🤗 Happy", color: "from-yellow-500/50" },
-  { value: 100, label: "✨ Excited", color: "from-pink-500/50" },
-];
-
 export function MoodForm({ onSubmit, isLoading }: MoodFormProps) {
-  const [open, setOpen] = useState(false);
-  const [mood, setMood] = useState(50);
-  const [note, setNote] = useState("");
-  const nova = useNovaAgent();
+  const [moodScore, setMoodScore] = useState(50);
+
+  const emotions = [
+    { value: 0, label: "😔", description: "Very Low" },
+    { value: 25, label: "😕", description: "Low" },
+    { value: 50, label: "😊", description: "Neutral" },
+    { value: 75, label: "😃", description: "Good" },
+    { value: 100, label: "🤗", description: "Great" },
+  ];
 
   const currentEmotion =
-    emotions.find((em) => Math.abs(mood - em.value) < 15) || emotions[2];
-
-  const handleSubmit =
-    async (onSubmit: (data: any) => Promise<void>) =>
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      // Trigger AI analysis
-      await nova.analyzeMood(mood, note);
-
-      // Handle high-risk situations
-      if (mood < 20) {
-        await nova.handleCrisis();
-      }
-
-      // Get AI suggestions
-      const suggestions = nova.suggestions;
-      if (suggestions.length > 0) {
-        // Implement suggestion UI (could be a toast notification)
-        console.log("AI Suggestions:", suggestions);
-      }
-
-      await onSubmit({ mood, note });
-      setOpen(false);
-      setNote("");
-    };
+    emotions.find((em) => Math.abs(moodScore - em.value) < 15) || emotions[2];
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Mood Entry
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>How are you feeling?</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-8 py-4">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center px-2">
-              {emotions.map((em) => (
-                <div
-                  key={em.value}
-                  className={`transition-all duration-500 ease-out cursor-pointer hover:scale-105 ${
-                    Math.abs(mood - em.value) < 15
-                      ? "opacity-100 scale-110"
-                      : "opacity-50 scale-100"
-                  }`}
-                  onClick={() => setMood(em.value)}
-                >
-                  <div className="text-2xl">{em.label.split(" ")[0]}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    {em.label.split(" ")[1]}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="relative px-2">
-              <div
-                className={`absolute inset-0 bg-gradient-to-r ${currentEmotion.color} to-transparent opacity-20 blur-2xl -z-10`}
-              />
-              <Slider
-                value={[mood]}
-                onValueChange={(value) => setMood(value[0])}
-                max={100}
-                step={1}
-                className="py-4"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Would you like to add a note?
-            </label>
-            <Textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="What's on your mind?"
-              className="h-32"
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving Mood...
-                </>
-              ) : (
-                "Save Mood"
-              )}
-            </Button>
-          </div>
+    <div className="space-y-6 py-4">
+      {/* Emotion display */}
+      <div className="text-center space-y-2">
+        <div className="text-4xl">{currentEmotion.label}</div>
+        <div className="text-sm text-muted-foreground">
+          {currentEmotion.description}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+
+      {/* Emotion slider */}
+      <div className="space-y-4">
+        <div className="flex justify-between px-2">
+          {emotions.map((em) => (
+            <div
+              key={em.value}
+              className={`cursor-pointer transition-opacity ${
+                Math.abs(moodScore - em.value) < 15
+                  ? "opacity-100"
+                  : "opacity-50"
+              }`}
+              onClick={() => setMoodScore(em.value)}
+            >
+              <div className="text-2xl">{em.label}</div>
+            </div>
+          ))}
+        </div>
+
+        <Slider
+          value={[moodScore]}
+          onValueChange={(value) => setMoodScore(value[0])}
+          min={0}
+          max={100}
+          step={1}
+          className="py-4"
+        />
+      </div>
+
+      {/* Submit button */}
+      <Button
+        className="w-full"
+        onClick={() => onSubmit({ moodScore })}
+        disabled={isLoading}
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          "Save Mood"
+        )}
+      </Button>
+    </div>
   );
 }
