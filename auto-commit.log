@@ -1,7 +1,0 @@
-Wed Feb  5 13:38:33 GMT 2025: API Response: {
-  "error": {
-    "code": 400,
-    "message": "Invalid JSON payload received. Expected , or } after key:value pair.\n+1 @@\n+console.log(\"test\");\"\n           \n                    ^",
-    "status": "INVALID_ARGUMENT"
-  }
-}

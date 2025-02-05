@@ -11,7 +11,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useNovaAgent } from "@/lib/agents/nova.agent";
 import {
   Dialog,
   DialogContent,
@@ -69,12 +68,10 @@ interface AnxietyGamesProps {
 export const AnxietyGames = ({ onGamePlayed }: AnxietyGamesProps) => {
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [showGame, setShowGame] = useState(false);
-  const nova = useNovaAgent();
 
   const handleGameStart = async (gameId: string) => {
     setSelectedGame(gameId);
     setShowGame(true);
-    await nova.suggestIntervention();
 
     // Log the activity
     if (onGamePlayed) {

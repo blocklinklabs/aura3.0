@@ -14,7 +14,6 @@ import { ethers } from "ethers";
 import { OpenAI } from "openai";
 import { TherapyServiceManager } from "../contracts/types";
 
-// Interfaces for better type safety
 interface SessionMetrics {
   attendance: number;
   progress: number;
