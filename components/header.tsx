@@ -24,8 +24,6 @@ export function Header() {
   const navItems = [
     { href: "#features", label: "Features" },
     { href: "#about", label: "About Nova" },
-    { href: "#support", label: "Support" },
-    { href: "#resources", label: "Resources" },
   ];
 
   return (
