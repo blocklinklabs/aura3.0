@@ -46,7 +46,8 @@ yarn-error.log*
 
 # vercel
 .vercel
-
+drizzle.config.js
+hardhat.config.js
 # typescript
 *.tsbuildinfo
 next-env.d.ts
