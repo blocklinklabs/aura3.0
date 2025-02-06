@@ -287,6 +287,7 @@ export default function TherapyPage() {
       const url = "https://autonome.alt.technology/auradev-mjbict/chat";
       const username = "auradev";
       const password = "GFtZoaBXRy";
+
       const messageData = { message: userMessage };
 
       const headers = new Headers({
