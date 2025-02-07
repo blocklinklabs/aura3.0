@@ -507,9 +507,9 @@ export default function TherapyPage() {
 
   return (
     <div className="relative max-w-6xl mx-auto px-4">
-      <div className="flex h-[calc(100vh-4rem)] mt-20">
+      <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] mt-20">
         {/* Left sidebar */}
-        <div className="w-[280px] border-r shrink-0">
+        <div className="w-full lg:w-[280px] border-r shrink-0 lg:block">
           <SessionHistory onNewSession={createNewSession} />
         </div>
 
@@ -518,7 +518,7 @@ export default function TherapyPage() {
           {messages.length === 0 ? (
             // Welcome screen with suggested questions
             <div className="flex-1 flex items-center justify-center p-4">
-              <div className="max-w-2xl w-full space-y-8">
+              <div className="max-w-2xl w-full space-y-4 md:space-y-8">
                 <div className="text-center space-y-4">
                   <div className="relative inline-flex flex-col items-center">
                     {/* Glow effect */}
@@ -550,7 +550,7 @@ export default function TherapyPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-3 relative">
+                <div className="grid gap-2 md:gap-3 relative px-2">
                   <motion.div
                     className="absolute -inset-4 bg-gradient-to-b from-primary/5 to-transparent blur-xl"
                     initial={{ opacity: 0 }}
@@ -567,7 +567,15 @@ export default function TherapyPage() {
                       <Button
                         variant="outline"
                         className="w-full h-auto py-4 px-6 text-left justify-start hover:bg-muted/50 hover:border-primary/50 transition-all duration-300"
-                        onClick={() => sendMessage(q.text)}
+                        onClick={() => {
+                          setMessage(q.text);
+                          setTimeout(() => {
+                            const event = {
+                              preventDefault: () => {},
+                            } as React.FormEvent;
+                            handleSubmit(event);
+                          }, 100);
+                        }}
                       >
                         {q.text}
                       </Button>
@@ -588,7 +596,7 @@ export default function TherapyPage() {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
                       className={cn(
-                        "px-6 py-8 flex gap-4",
+                        "px-3 md:px-6 py-4 md:py-8 flex gap-4",
                         msg.role === "assistant"
                           ? "bg-muted/30"
                           : "bg-background"
@@ -621,7 +629,7 @@ export default function TherapyPage() {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="px-6 py-8 flex gap-4 bg-muted/30"
+                    className="px-3 md:px-6 py-4 md:py-8 flex gap-4 bg-muted/30"
                   >
                     <div className="w-8 h-8 shrink-0">
                       <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center ring-1 ring-primary/20">
@@ -640,10 +648,10 @@ export default function TherapyPage() {
           )}
 
           {/* Input area */}
-          <div className="border-t bg-background/50 backdrop-blur supports-[backdrop-filter]:bg-background/50 p-4">
+          <div className="border-t bg-background/50 backdrop-blur supports-[backdrop-filter]:bg-background/50 p-2 md:p-4">
             <form
               onSubmit={handleSubmit}
-              className="max-w-3xl mx-auto flex gap-4 items-end relative"
+              className="max-w-3xl mx-auto flex gap-2 md:gap-4 items-end relative"
             >
               <div className="flex-1 relative group">
                 <textarea
@@ -690,7 +698,7 @@ export default function TherapyPage() {
                 </Button>
               </div>
             </form>
-            <div className="mt-2 text-xs text-center text-muted-foreground">
+            <div className="mt-2 text-xs text-center text-muted-foreground hidden md:block">
               Press <kbd className="px-2 py-0.5 rounded bg-muted">Enter ↵</kbd>{" "}
               to send,
               <kbd className="px-2 py-0.5 rounded bg-muted ml-1">
@@ -704,7 +712,7 @@ export default function TherapyPage() {
 
       {/* Add Drug Information Prompt */}
       {drugPrompt && (
-        <div className="fixed bottom-24 right-4 max-w-sm">
+        <div className="fixed bottom-24 right-2 md:right-4 max-w-[calc(100vw-1rem)] md:max-w-sm">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
@@ -749,7 +757,7 @@ export default function TherapyPage() {
 
       {/* Add Drug Information Display */}
       {drugInfo && (
-        <div className="fixed inset-y-0 right-0 w-96 bg-background border-l shadow-lg p-4 overflow-y-auto">
+        <div className="fixed inset-y-0 right-0 w-full md:w-96 bg-background border-l shadow-lg p-4 overflow-y-auto z-50">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold capitalize">
               {drugInfo.name}
@@ -808,7 +816,7 @@ export default function TherapyPage() {
 
       {/* Add Stress Management Prompt */}
       {stressPrompt && !showActivity && (
-        <div className="fixed bottom-24 right-4 max-w-sm">
+        <div className="fixed bottom-24 right-2 md:right-4 max-w-[calc(100vw-1rem)] md:max-w-sm">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
@@ -856,8 +864,8 @@ export default function TherapyPage() {
 
       {/* Show Activity */}
       {showActivity && stressPrompt && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-background p-6 rounded-lg max-w-2xl w-full mx-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 md:p-0">
+          <div className="bg-background p-4 md:p-6 rounded-lg w-full max-w-2xl mx-2 md:mx-4">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-semibold">
                 {stressPrompt.activity.title}
