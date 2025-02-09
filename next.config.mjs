@@ -10,6 +10,7 @@ const nextConfig = {
   experimental: {
     serverActions: true,
     serverComponentsExternalPackages: [],
+    missingSuspenseWithCSRBailout: false,
   },
 
   skipMiddlewareUrlNormalize: true,
