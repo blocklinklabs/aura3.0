@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { motion } from "framer-motion";
 import {
   Brain,
@@ -337,12 +337,26 @@ const generateAIInsights = (activities: Activity[]) => {
     .slice(0, 3);
 };
 
+// Create a SearchParamsComponent to isolate useSearchParams
+const SearchParamsComponent = ({
+  onParamsChange,
+}: {
+  onParamsChange: (params: URLSearchParams) => void;
+}) => {
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    onParamsChange(searchParams);
+  }, [searchParams, onParamsChange]);
+
+  return null;
+};
+
 export default function Dashboard() {
   const { isLoading, user, isAuthenticated } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [showModal, setShowModal] = useState(false);
 
   // New states for crisis management and interventions
@@ -708,6 +722,12 @@ export default function Dashboard() {
     [user?.id, loadActivities]
   );
 
+  // Add handler for search params
+  const handleSearchParams = useCallback((params: URLSearchParams) => {
+    // Handle search params here
+    // Your existing search params logic
+  }, []);
+
   // Simple loading state
   if (!mounted) {
     return (
@@ -743,6 +763,9 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Suspense fallback={null}>
+        <SearchParamsComponent onParamsChange={handleSearchParams} />
+      </Suspense>
       <Container className="pt-20 pb-8 space-y-6">
         {/* Header Section */}
         <div className="flex justify-between items-center">
