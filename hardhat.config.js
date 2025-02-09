@@ -12,11 +12,7 @@ module.exports = {
     hardhat: {
       chainId: 4202,
     },
-    emvOnFlow: {
-      url: "https://testnet.evm.nodes.onflow.org",
-      accounts: [privateKey],
-      gasPrice: 1000000000,
-    },
+
     baseSepolia: {
       url: "https://sepolia.base.org",
       accounts: [privateKey],
