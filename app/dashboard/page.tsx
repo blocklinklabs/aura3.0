@@ -985,7 +985,7 @@ export default function Dashboard() {
                         <h3 className="text-lg font-semibold mb-1">
                           Connect Your Fitbit
                         </h3>
-                        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                        <span className="text-xs bg-primary/10 text-white px-2 py-0.5 rounded-full font-medium">
                           Coming Soon
                         </span>
                       </div>
