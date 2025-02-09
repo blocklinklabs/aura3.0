@@ -284,9 +284,15 @@ export default function TherapyPage() {
       await updateSessionInfo(userMessage);
 
       // Make API call to AI service
-      const url = "https://autonome.alt.technology/auradev-mjbict/chat";
-      const username = "auradev";
-      const password = "GFtZoaBXRy";
+      const url = process.env.NEXT_PUBLIC_AI_CHAT_API_URL;
+      const username = process.env.AI_CHAT_API_USERNAME;
+      const password = process.env.AI_CHAT_API_PASSWORD;
+
+      if (!url || !username || !password) {
+        throw new Error(
+          "Missing AI chat API credentials in environment variables"
+        );
+      }
 
       const messageData = { message: userMessage };
 
@@ -567,7 +573,10 @@ export default function TherapyPage() {
                       <Button
                         variant="outline"
                         className="w-full h-auto py-4 px-6 text-left justify-start hover:bg-muted/50 hover:border-primary/50 transition-all duration-300"
-                        onClick={() => sendMessage(q.text)}
+                        onClick={() => {
+                          setMessage(q.text);
+                          handleSubmit(new Event("click") as React.FormEvent);
+                        }}
                       >
                         {q.text}
                       </Button>
