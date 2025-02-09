@@ -47,29 +47,6 @@ const nextConfig = {
     return config;
   },
 
-  // Disable non-user API routes generation in production build on Netlify
-  async headers() {
-    return process.env.NETLIFY
-      ? [
-          {
-            source: "/api/:path*",
-            headers: [
-              {
-                key: "x-api-disabled",
-                value: "true",
-              },
-            ],
-            missing: [
-              {
-                type: "pathname",
-                value: "/api/users",
-              },
-            ],
-          },
-        ]
-      : [];
-  },
-
   // Suppress specific console warnings
   onDemandEntries: {
     // Reduce console noise
