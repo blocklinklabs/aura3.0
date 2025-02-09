@@ -288,12 +288,6 @@ export default function TherapyPage() {
       const username = process.env.AI_CHAT_API_USERNAME;
       const password = process.env.AI_CHAT_API_PASSWORD;
 
-      // if (!url || !username || !password) {
-      //   throw new Error(
-      //     "Missing AI chat API credentials in environment variables"
-      //   );
-      // }
-
       const messageData = { message: userMessage };
 
       const headers = new Headers({
