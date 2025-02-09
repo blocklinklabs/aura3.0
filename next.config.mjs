@@ -31,9 +31,9 @@ const nextConfig = {
   webpack: (config, { isServer, dev }) => {
     // Check if we're building on Netlify
     if (process.env.NETLIFY && !dev) {
-      console.log("Excluding API routes from Netlify build...");
+      console.log("Excluding non-user API routes from Netlify build...");
       config.module.rules.push({
-        test: /app\/api\/.+\.(js|ts|tsx)$/,
+        test: /app\/api\/((?!users).+)\.(js|ts|tsx)$/,
         loader: "ignore-loader",
       });
     }
@@ -48,12 +48,19 @@ const nextConfig = {
     return config;
   },
 
-  // Disable API routes generation in production build on Netlify
+  // Disable non-user API routes generation in production build on Netlify
   async headers() {
     return process.env.NETLIFY
       ? [
           {
             source: "/api/:path*",
+            has: [
+              {
+                type: "regex",
+                key: "pathname",
+                value: "^(?!.*users).*$",
+              },
+            ],
             headers: [
               {
                 key: "x-api-disabled",
