@@ -284,20 +284,24 @@ export default function TherapyPage() {
       await updateSessionInfo(userMessage);
 
       // Make API call to AI service
-      const url = process.env.NEXT_PUBLIC_AI_CHAT_API_URL;
 
       const messageData = { message: userMessage };
 
-      const headers = new Headers({
-        "Content-Type": "application/json",
-        Authorization: `Basic ${btoa(
-          process.env.NEXT_PUBLIC_AI_CREDENTIALS_AUTONOME || ""
-        )}`,
-      });
+      if (
+        !process.env.NEXT_PUBLIC_AI_CHAT_API_URL ||
+        !process.env.NEXT_PUBLIC_AI_CREDENTIALS_AUTONOME
+      ) {
+        throw new Error("AI configuration is missing");
+      }
 
-      const response = await fetch(url, {
+      const response = await fetch(process.env.NEXT_PUBLIC_AI_CHAT_API_URL, {
         method: "POST",
-        headers: headers,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${btoa(
+            process.env.NEXT_PUBLIC_AI_CREDENTIALS_AUTONOME
+          )}`,
+        },
         body: JSON.stringify(messageData),
       });
 
