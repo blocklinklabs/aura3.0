@@ -288,11 +288,11 @@ export default function TherapyPage() {
       const username = process.env.AI_CHAT_API_USERNAME;
       const password = process.env.AI_CHAT_API_PASSWORD;
 
-      if (!url || !username || !password) {
-        throw new Error(
-          "Missing AI chat API credentials in environment variables"
-        );
-      }
+      // if (!url || !username || !password) {
+      //   throw new Error(
+      //     "Missing AI chat API credentials in environment variables"
+      //   );
+      // }
 
       const messageData = { message: userMessage };
 
@@ -573,10 +573,7 @@ export default function TherapyPage() {
                       <Button
                         variant="outline"
                         className="w-full h-auto py-4 px-6 text-left justify-start hover:bg-muted/50 hover:border-primary/50 transition-all duration-300"
-                        onClick={() => {
-                          setMessage(q.text);
-                          handleSubmit(new Event("click") as React.FormEvent);
-                        }}
+                        onClick={() => sendMessage(q.text)}
                       >
                         {q.text}
                       </Button>
