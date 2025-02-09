@@ -8,12 +8,11 @@ const nextConfig = {
   },
 
   experimental: {
-    appDir: true,
-    suppressHydrationWarning: true,
-    skipTypeChecking: true,
-    skipMiddlewareUrlNormalize: true,
-    missingSuspenseWithCSRBailout: false,
+    serverActions: true,
+    serverComponentsExternalPackages: [],
   },
+
+  skipMiddlewareUrlNormalize: true,
 
   reactStrictMode: false,
 
@@ -54,17 +53,16 @@ const nextConfig = {
       ? [
           {
             source: "/api/:path*",
-            has: [
-              {
-                type: "regex",
-                key: "pathname",
-                value: "^(?!.*users).*$",
-              },
-            ],
             headers: [
               {
                 key: "x-api-disabled",
                 value: "true",
+              },
+            ],
+            missing: [
+              {
+                type: "pathname",
+                value: "/api/users",
               },
             ],
           },
