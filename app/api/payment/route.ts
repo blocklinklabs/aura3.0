@@ -6,10 +6,7 @@ const isProduction = process.env.NODE_ENV === "production";
 
 // Validate environment setup
 function validateEnvironment() {
-  const requiredEnvVars = [
-    "WALLET_PRIVATE_KEY_BASE",
-    "NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID",
-  ];
+  const requiredEnvVars = ["WALLET_PRIVATE_KEY_BASE"];
 
   const missingVars = requiredEnvVars.filter(
     (varName) => !process.env[varName]
