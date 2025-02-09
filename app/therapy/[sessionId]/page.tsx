@@ -298,9 +298,7 @@ export default function TherapyPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Basic ${btoa(
-            process.env.NEXT_PUBLIC_AI_CREDENTIALS_AUTONOME
-          )}`,
+          Authorization: `Basic ${btoa("greenode:dcMWueeaVK")}`,
         },
         body: JSON.stringify(messageData),
       });
