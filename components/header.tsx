@@ -22,8 +22,8 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navItems = [
-    { href: "#features", label: "Features" },
-    { href: "#about", label: "About Nova" },
+    { href: "/features", label: "Features" },
+    { href: "/about", label: "About Aura" },
   ];
 
   return (
