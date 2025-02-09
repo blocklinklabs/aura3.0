@@ -5,7 +5,6 @@ require("dotenv").config();
 const privateKey = process.env.WALLET_PRIVATE_KEY_BASE;
 
 /** @type import('hardhat/config').HardhatUserConfig */
-// npx hardhat ignition deploy ./ignition/modules/TherapyConsent.js --network baseSepolia
 module.exports = {
   defaultNetwork: "sepolia",
   networks: {
