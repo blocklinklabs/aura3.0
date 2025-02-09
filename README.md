@@ -327,271 +327,196 @@ DATABASE_URL=your_database_url
 
 ## 🏗 Architecture
 
-### System Overview
+### Agent System
+
+```mermaid
+graph TD
+    A[User Input] --> B[AI Agent]
+    B --> C[Blockchain]
+    C --> D[Secure Storage]
+```
+
+- Autonomous AI agents for therapy sessions
+- Multi-agent coordination
+- Secure communication
+- Dynamic behavior adaptation
+
+### Data Flow
+
+1. User interaction via frontend
+2. AI agent processing with LangChain
+3. Blockchain verification and recording
+4. Secure data storage with encryption
+5. Real-time analytics and monitoring
+
+## 🤖 AI Agent Architecture
 
 ```mermaid
 graph TB
-    subgraph Client["Client Layer"]
-        UI[Web Interface]
-        Mobile[Mobile App]
-        IoT[IoT Devices]
+    %% Style definitions
+    classDef agent fill:#a7c7e7,stroke:#6482a0,stroke-width:2px
+    classDef process fill:#c9e4ca,stroke:#7ea37f,stroke-width:2px
+    classDef data fill:#ffb7b2,stroke:#cc8d89,stroke-width:2px
+    classDef security fill:#ffe5d4,stroke:#cbb5a7,stroke-width:2px
+
+    %% Main AI Agent Components
+    Agent[Therapy Agent]:::agent
+    NLP[NLP Engine]:::process
+    Memory[Memory System]:::data
+    Security[Security Layer]:::security
+
+    %% Subcomponents
+    subgraph AgentCore[AI Agent Core]
+        direction TB
+        Intent[Intent Analysis]:::process
+        Emotion[Emotion Processing]:::process
+        Context[Context Manager]:::process
+        Response[Response Generator]:::process
+        Crisis[Crisis Detector]:::process
     end
 
-    subgraph Application["Application Layer"]
-        API[API Gateway]
-        WSS[WebSocket Server]
-        Auth[Auth Service]
-
-        subgraph AI["AI Services"]
-            LLM[Language Models]
-            NLP[NLP Processing]
-            Agent[Agent Orchestrator]
-            Crisis[Crisis Detection]
-        end
-
-        subgraph Core["Core Services"]
-            Therapy[Therapy Service]
-            Analytics[Analytics Engine]
-            Notif[Notification Service]
-        end
+    subgraph MemorySystem[Memory Management]
+        direction TB
+        STM[Short-term Memory]:::data
+        LTM[Long-term Memory]:::data
+        KB[Knowledge Base]:::data
     end
 
-    subgraph Blockchain["Blockchain Layer"]
-        Smart[Smart Contracts]
-        Graph[The Graph]
-        Bridge[Chain Bridge]
-
-        subgraph Security["Security Layer"]
-            Lit[Lit Protocol]
-            ZK[Zero Knowledge]
-            MPC[Multi-Party Compute]
-        end
+    subgraph SecurityLayer[Security & Compliance]
+        direction TB
+        HIPAA[HIPAA Compliance]:::security
+        Encrypt[Encryption]:::security
+        Audit[Audit Log]:::security
     end
 
-    subgraph Storage["Storage Layer"]
-        DB[(PostgreSQL)]
-        Cache[(Redis Cache)]
-        IPFS[IPFS Storage]
+    subgraph NLPSystem[Natural Language Processing]
+        direction TB
+        LangChain[LangChain]:::process
+        GPT[GPT Models]:::process
+        CustomModels[Custom Models]:::process
     end
 
-    %% Client Layer Connections
-    UI --> API
-    UI --> WSS
-    Mobile --> API
-    IoT --> WSS
+    %% Connections
+    User((User Input)) --> Agent
+    Agent --> AgentCore
 
-    %% Application Layer Connections
-    API --> Auth
-    API --> Core
-    WSS --> Core
-    Auth --> Security
+    %% NLP Connections
+    Agent --> NLPSystem
+    LangChain --> GPT
+    LangChain --> CustomModels
 
-    %% AI Service Connections
-    Agent --> LLM
-    Agent --> NLP
-    Agent --> Crisis
-    Core --> Agent
+    %% Core Processing
+    Intent --> Context
+    Emotion --> Context
+    Context --> Response
+    Context --> Crisis
 
-    %% Blockchain Connections
-    Core --> Smart
-    Smart --> Graph
-    Smart --> Bridge
-    Smart --> Security
+    %% Memory Connections
+    Agent --> MemorySystem
+    STM --> Context
+    LTM --> Context
+    KB --> Response
 
-    %% Storage Connections
-    Core --> DB
-    Core --> Cache
-    Core --> IPFS
+    %% Security Integration
+    Agent --> SecurityLayer
+    HIPAA --> Audit
+    Encrypt --> Audit
+
+    %% Output Flow
+    Response --> Output((Response Output))
+    Crisis --> Emergency((Emergency Protocol))
 ```
-
-### Data Flow Architecture
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant F as Frontend
     participant A as AI Agent
-    participant B as Blockchain
-    participant S as Storage
+    participant N as NLP System
+    participant M as Memory
+    participant S as Security
+    participant R as Response Gen
 
-    U->>F: Start Therapy Session
-    F->>A: Initialize Agent
-    A->>B: Create Session Contract
-    B-->>F: Return Session ID
+    Note over U,R: Normal Interaction Flow
+    U->>A: Send Message
+    A->>S: Verify Security Context
+    A->>N: Process Language
+    N->>A: Return Analysis
+    A->>M: Retrieve Context
+    M->>A: Return History
+    A->>R: Generate Response
+    R->>S: Validate & Encrypt
+    S->>A: Secure Response
+    A->>U: Send Response
 
-    rect rgb(200, 220, 250)
-        Note over U,S: Therapy Session Flow
-        U->>F: Send Message
-        F->>A: Process Input
-        A->>A: Analyze Emotion
-        A->>A: Generate Response
-        A->>B: Record Interaction
-        A-->>F: Return Response
-        F-->>U: Display Response
-        A->>S: Store Encrypted Data
-    end
-
-    rect rgb(250, 220, 200)
-        Note over U,S: Crisis Detection
-        A->>A: Monitor Risk Levels
+    Note over U,R: Crisis Detection Flow
+    rect rgb(255, 220, 220)
+        A->>A: Detect Crisis Signals
         alt Crisis Detected
-            A->>F: Trigger Alert
-            F->>U: Show Emergency Options
-            A->>B: Log Emergency Event
+            A->>S: Log Emergency
+            A->>U: Trigger Emergency Protocol
         end
     end
 
-    rect rgb(220, 250, 220)
-        Note over U,S: Session Completion
-        U->>F: End Session
-        F->>A: Finalize Session
-        A->>B: Update Contract
-        A->>S: Store Summary
-        B-->>F: Confirm Completion
-        F-->>U: Session Summary
+    Note over U,R: Memory Update Flow
+    rect rgb(220, 255, 220)
+        A->>M: Update Session Memory
+        M->>S: Encrypt Memory
+        S->>M: Confirm Storage
     end
 ```
 
-### Component Architecture
+### AI Agent Components
 
-```mermaid
-classDiagram
-    class TherapySession {
-        +UUID sessionId
-        +Address patientAddress
-        +String encryptedData
-        +Boolean isEmergency
-        +startSession()
-        +updateSession()
-        +endSession()
-        +triggerEmergency()
-    }
+1. **Core Agent**
 
-    class AIAgent {
-        +String agentId
-        +Array~String~ capabilities
-        +processInput()
-        +generateResponse()
-        +detectCrisis()
-        +updateMemory()
-    }
+   - Intent Analysis: Understands user intentions
+   - Emotion Processing: Analyzes emotional content
+   - Context Manager: Maintains conversation context
+   - Response Generator: Creates therapeutic responses
+   - Crisis Detector: Monitors for emergency situations
 
-    class SmartContract {
-        +Address contractAddress
-        +manageConsent()
-        +recordSession()
-        +handlePayment()
-        +verifyCompliance()
-    }
+2. **NLP System**
 
-    class SecurityModule {
-        +encryptData()
-        +verifyAccess()
-        +generateProofs()
-        +manageKeys()
-    }
+   - LangChain: Orchestrates language models
+   - GPT Models: Handles complex language tasks
+   - Custom Models: Specialized therapeutic processing
 
-    class StorageManager {
-        +storeSession()
-        +retrieveData()
-        +updateRecords()
-        +maintainIndex()
-    }
+3. **Memory Management**
 
-    TherapySession --> AIAgent
-    TherapySession --> SmartContract
-    AIAgent --> SecurityModule
-    SmartContract --> SecurityModule
-    TherapySession --> StorageManager
-    SecurityModule --> StorageManager
-```
+   - Short-term Memory: Current session context
+   - Long-term Memory: Historical interactions
+   - Knowledge Base: Therapeutic knowledge storage
 
-### Network Architecture
+4. **Security Layer**
+   - HIPAA Compliance: Healthcare data standards
+   - Encryption: End-to-end data protection
+   - Audit Log: Interaction tracking
 
-```mermaid
-flowchart TB
-    subgraph Client[Client Zone]
-        direction TB
-        UI[User Interface]
-        SDK[Client SDK]
-        Cache[Local Cache]
-    end
+### Data Flow Process
 
-    subgraph Edge[Edge Network]
-        direction TB
-        CDN[Content Delivery]
-        WAF[Web Application Firewall]
-        LB[Load Balancer]
-    end
+1. **Input Processing**
 
-    subgraph App[Application Zone]
-        direction TB
-        API[API Servers]
-        WS[WebSocket Cluster]
-        Queue[Message Queue]
-    end
+   - User message received
+   - Security context verified
+   - Language processing initiated
 
-    subgraph AI[AI Zone]
-        direction TB
-        Agents[Agent Pool]
-        Models[AI Models]
-        Inference[Inference Engine]
-    end
+2. **Core Processing**
 
-    subgraph Data[Data Zone]
-        direction TB
-        Primary[(Primary DB)]
-        Replica[(Replica DB)]
-        Analytics[(Analytics DB)]
-    end
+   - Intent analysis performed
+   - Emotional content evaluated
+   - Context updated
+   - Crisis signals monitored
 
-    subgraph Blockchain[Blockchain Zone]
-        direction TB
-        Nodes[Base Nodes]
-        Indexer[Graph Indexer]
-        Bridge[Chain Bridge]
-    end
+3. **Response Generation**
 
-    Client --> Edge
-    Edge --> App
-    App --> AI
-    App --> Data
-    App --> Blockchain
+   - Context-aware response created
+   - Security validation performed
+   - Response encrypted and delivered
 
-    %% Add security layers
-    classDef security fill:#f96,stroke:#333,stroke-width:2px
-    class WAF,Bridge security
-```
-
-This architecture demonstrates:
-
-1. **Layered Structure**
-
-   - Client Layer: Web, Mobile, IoT interfaces
-   - Application Layer: Core services and AI components
-   - Blockchain Layer: Smart contracts and security
-   - Storage Layer: Data persistence and caching
-
-2. **Data Flow**
-
-   - Session initialization and management
-   - Real-time therapy interactions
-   - Crisis detection and handling
-   - Session completion and recording
-
-3. **Component Relationships**
-
-   - Therapy session management
-   - AI agent interactions
-   - Smart contract integration
-   - Security and storage handling
-
-4. **Network Topology**
-   - Client-side architecture
-   - Edge network configuration
-   - Application server setup
-   - Data storage distribution
-   - Blockchain node integration
+4. **Memory Updates**
+   - Session context updated
+   - Long-term memory modified
+   - Audit logs generated
 
 ## 🔐 Security Measures
 
