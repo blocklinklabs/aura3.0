@@ -285,14 +285,14 @@ export default function TherapyPage() {
 
       // Make API call to AI service
       const url = process.env.NEXT_PUBLIC_AI_CHAT_API_URL;
-      const username = process.env.AI_CHAT_API_USERNAME;
-      const password = process.env.AI_CHAT_API_PASSWORD;
 
       const messageData = { message: userMessage };
 
       const headers = new Headers({
         "Content-Type": "application/json",
-        Authorization: "Basic " + btoa(`${username}:${password}`),
+        Authorization: `Basic ${btoa(
+          process.env.NEXT_PUBLIC_AI_CREDENTIALS_AUTONOME || ""
+        )}`,
       });
 
       const response = await fetch(url, {
