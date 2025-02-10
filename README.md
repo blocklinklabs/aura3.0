@@ -327,196 +327,140 @@ DATABASE_URL=your_database_url
 
 ## 🏗 Architecture
 
-### Agent System
+### AI Agent System Architecture
 
 ```mermaid
 graph TD
-    A[User Input] --> B[AI Agent]
-    B --> C[Blockchain]
-    C --> D[Secure Storage]
+    subgraph User_Interface
+        A[User Input] --> B[Chat Interface]
+        B --> C[Emotion Detection]
+    end
+
+    subgraph AI_Core
+        D[LangChain Orchestrator]
+        E[Base AgentKit]
+        F[Eliza Framework]
+        G[Memory Manager]
+    end
+
+    subgraph Security_Layer
+        H[Lit Protocol]
+        I[Encryption Module]
+        J[Access Control]
+    end
+
+    subgraph Blockchain_Layer
+        K[Smart Contracts]
+        L[Session Records]
+        M[Payment System]
+    end
+
+    subgraph External_Integration
+        N[Healthcare APIs]
+        O[Wearable Data]
+        P[IoT Devices]
+    end
+
+    %% Core Flow
+    C -->|Analyzed Input| D
+    D -->|Orchestrates| E
+    D -->|Orchestrates| F
+    E --> G
+    F --> G
+    G -->|Secure Storage| H
+
+    %% Security Flow
+    H -->|Encrypted Data| I
+    I -->|Access Rules| J
+    J -->|Verified Access| K
+
+    %% Blockchain Integration
+    K -->|Records| L
+    K -->|Processes| M
+
+    %% External Data Flow
+    N -->|Health Data| D
+    O -->|Biometrics| D
+    P -->|Environment| D
+
+    %% Response Flow
+    G -->|Generated Response| B
+
+    classDef primary fill:#f9f,stroke:#333,stroke-width:2px
+    classDef secondary fill:#bbf,stroke:#333,stroke-width:2px
+    classDef security fill:#ff9,stroke:#333,stroke-width:2px
+    classDef blockchain fill:#9f9,stroke:#333,stroke-width:2px
+    classDef external fill:#f99,stroke:#333,stroke-width:2px
+
+    class A,B,C primary
+    class D,E,F,G secondary
+    class H,I,J security
+    class K,L,M blockchain
+    class N,O,P external
 ```
 
-- Autonomous AI agents for therapy sessions
-- Multi-agent coordination
-- Secure communication
-- Dynamic behavior adaptation
+### Architecture Components Explanation
 
-### Data Flow
+1. **User Interface Layer**
 
-1. User interaction via frontend
-2. AI agent processing with LangChain
-3. Blockchain verification and recording
-4. Secure data storage with encryption
-5. Real-time analytics and monitoring
+   - User Input: Text, voice, or biometric data
+   - Chat Interface: Real-time communication portal
+   - Emotion Detection: NLP-based sentiment analysis
 
-## 🤖 AI Agent Architecture
+2. **AI Core Layer**
 
-```mermaid
-graph TB
-    %% Style definitions
-    classDef agent fill:#a7c7e7,stroke:#6482a0,stroke-width:2px
-    classDef process fill:#c9e4ca,stroke:#7ea37f,stroke-width:2px
-    classDef data fill:#ffb7b2,stroke:#cc8d89,stroke-width:2px
-    classDef security fill:#ffe5d4,stroke:#cbb5a7,stroke-width:2px
+   - LangChain Orchestrator: Manages AI agent interactions
+   - Base AgentKit: Primary agent framework
+   - Eliza Framework: Therapeutic conversation model
+   - Memory Manager: Maintains context and history
 
-    %% Main AI Agent Components
-    Agent[Therapy Agent]:::agent
-    NLP[NLP Engine]:::process
-    Memory[Memory System]:::data
-    Security[Security Layer]:::security
+3. **Security Layer**
 
-    %% Subcomponents
-    subgraph AgentCore[AI Agent Core]
-        direction TB
-        Intent[Intent Analysis]:::process
-        Emotion[Emotion Processing]:::process
-        Context[Context Manager]:::process
-        Response[Response Generator]:::process
-        Crisis[Crisis Detector]:::process
-    end
+   - Lit Protocol: Decentralized key management
+   - Encryption Module: End-to-end data protection
+   - Access Control: Permission management
 
-    subgraph MemorySystem[Memory Management]
-        direction TB
-        STM[Short-term Memory]:::data
-        LTM[Long-term Memory]:::data
-        KB[Knowledge Base]:::data
-    end
+4. **Blockchain Layer**
 
-    subgraph SecurityLayer[Security & Compliance]
-        direction TB
-        HIPAA[HIPAA Compliance]:::security
-        Encrypt[Encryption]:::security
-        Audit[Audit Log]:::security
-    end
+   - Smart Contracts: Session and consent management
+   - Session Records: Immutable therapy records
+   - Payment System: Crypto payment processing
 
-    subgraph NLPSystem[Natural Language Processing]
-        direction TB
-        LangChain[LangChain]:::process
-        GPT[GPT Models]:::process
-        CustomModels[Custom Models]:::process
-    end
-
-    %% Connections
-    User((User Input)) --> Agent
-    Agent --> AgentCore
-
-    %% NLP Connections
-    Agent --> NLPSystem
-    LangChain --> GPT
-    LangChain --> CustomModels
-
-    %% Core Processing
-    Intent --> Context
-    Emotion --> Context
-    Context --> Response
-    Context --> Crisis
-
-    %% Memory Connections
-    Agent --> MemorySystem
-    STM --> Context
-    LTM --> Context
-    KB --> Response
-
-    %% Security Integration
-    Agent --> SecurityLayer
-    HIPAA --> Audit
-    Encrypt --> Audit
-
-    %% Output Flow
-    Response --> Output((Response Output))
-    Crisis --> Emergency((Emergency Protocol))
-```
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant A as AI Agent
-    participant N as NLP System
-    participant M as Memory
-    participant S as Security
-    participant R as Response Gen
-
-    Note over U,R: Normal Interaction Flow
-    U->>A: Send Message
-    A->>S: Verify Security Context
-    A->>N: Process Language
-    N->>A: Return Analysis
-    A->>M: Retrieve Context
-    M->>A: Return History
-    A->>R: Generate Response
-    R->>S: Validate & Encrypt
-    S->>A: Secure Response
-    A->>U: Send Response
-
-    Note over U,R: Crisis Detection Flow
-    rect rgb(255, 220, 220)
-        A->>A: Detect Crisis Signals
-        alt Crisis Detected
-            A->>S: Log Emergency
-            A->>U: Trigger Emergency Protocol
-        end
-    end
-
-    Note over U,R: Memory Update Flow
-    rect rgb(220, 255, 220)
-        A->>M: Update Session Memory
-        M->>S: Encrypt Memory
-        S->>M: Confirm Storage
-    end
-```
-
-### AI Agent Components
-
-1. **Core Agent**
-
-   - Intent Analysis: Understands user intentions
-   - Emotion Processing: Analyzes emotional content
-   - Context Manager: Maintains conversation context
-   - Response Generator: Creates therapeutic responses
-   - Crisis Detector: Monitors for emergency situations
-
-2. **NLP System**
-
-   - LangChain: Orchestrates language models
-   - GPT Models: Handles complex language tasks
-   - Custom Models: Specialized therapeutic processing
-
-3. **Memory Management**
-
-   - Short-term Memory: Current session context
-   - Long-term Memory: Historical interactions
-   - Knowledge Base: Therapeutic knowledge storage
-
-4. **Security Layer**
-   - HIPAA Compliance: Healthcare data standards
-   - Encryption: End-to-end data protection
-   - Audit Log: Interaction tracking
+5. **External Integration Layer**
+   - Healthcare APIs: Provider system integration
+   - Wearable Data: Health metrics collection
+   - IoT Devices: Environmental control
 
 ### Data Flow Process
 
 1. **Input Processing**
 
-   - User message received
-   - Security context verified
-   - Language processing initiated
+   - User provides input through interface
+   - Emotion detection analyzes sentiment
+   - Input is encrypted and validated
 
-2. **Core Processing**
+2. **AI Processing**
 
-   - Intent analysis performed
-   - Emotional content evaluated
-   - Context updated
-   - Crisis signals monitored
+   - LangChain orchestrates agent responses
+   - AgentKit and Eliza process therapy logic
+   - Memory system maintains context
 
-3. **Response Generation**
+3. **Security Handling**
 
-   - Context-aware response created
-   - Security validation performed
-   - Response encrypted and delivered
+   - All data is encrypted via Lit Protocol
+   - Access control verifies permissions
+   - Blockchain records interactions
 
-4. **Memory Updates**
-   - Session context updated
-   - Long-term memory modified
-   - Audit logs generated
+4. **Response Generation**
+
+   - AI generates appropriate response
+   - Response is verified for safety
+   - Delivered back to user interface
+
+5. **External Data Integration**
+   - Health data is continuously monitored
+   - Environment is adjusted as needed
+   - Records are securely maintained
 
 ## 🔐 Security Measures
 

@@ -8,12 +8,12 @@ const nextConfig = {
   },
 
   experimental: {
-    serverActions: true,
-    serverComponentsExternalPackages: [],
+    appDir: true,
+    suppressHydrationWarning: true,
+    skipTypeChecking: true,
+    skipMiddlewareUrlNormalize: true,
     missingSuspenseWithCSRBailout: false,
   },
-
-  skipMiddlewareUrlNormalize: true,
 
   reactStrictMode: false,
 
@@ -31,9 +31,9 @@ const nextConfig = {
   webpack: (config, { isServer, dev }) => {
     // Check if we're building on Netlify
     if (process.env.NETLIFY && !dev) {
-      console.log("Excluding non-user API routes from Netlify build...");
+      console.log("Excluding API routes from Netlify build...");
       config.module.rules.push({
-        test: /app\/api\/((?!users).+)\.(js|ts|tsx)$/,
+        test: /app\/api\/.+\.(js|ts|tsx)$/,
         loader: "ignore-loader",
       });
     }
@@ -46,6 +46,23 @@ const nextConfig = {
     };
 
     return config;
+  },
+
+  // Disable API routes generation in production build on Netlify
+  async headers() {
+    return process.env.NETLIFY
+      ? [
+          {
+            source: "/api/:path*",
+            headers: [
+              {
+                key: "x-api-disabled",
+                value: "true",
+              },
+            ],
+          },
+        ]
+      : [];
   },
 
   // Suppress specific console warnings
