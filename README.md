@@ -316,15 +316,6 @@ npm run dev
 npx hardhat run scripts/deploy.js --network baseSepolia
 ```
 
-### Environment Configuration
-
-```bash
-# Required environment variables
-NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_project_id
-NEXT_PUBLIC_ALCHEMY_API_KEY=your_alchemy_key
-DATABASE_URL=your_database_url
-```
-
 ## 🏗 Architecture
 
 ### AI Agent System Architecture
