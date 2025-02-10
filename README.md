@@ -8,7 +8,7 @@
 > A revolutionary mental health platform that combines autonomous AI agents, blockchain technology, and decentralized infrastructure to provide accessible, secure, and personalized therapeutic support.
 
 <p align="center">
-  <img src="docs/assets/hero-image.png" alt="Aura3.0 Platform" width="600">
+  <img src="./public/home.png" alt="Aura3.0 Platform" width="600">
 </p>
 
 ---
