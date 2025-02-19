@@ -1,75 +1,69 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.12;
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.28;
 
-import "@eigenlayer/contracts/interfaces/IServiceManager.sol";
-import "@eigenlayer/contracts/permissions/ECDSAServiceManagerBase.sol";
-
-contract TherapyServiceManager is ECDSAServiceManagerBase {
-    using ECDSAUpgradeable for bytes32;
-
-    struct TherapySession {
-        address patient;
-        string encryptedConversation;
-        uint32 sessionStartBlock;
-        bool isEmergency;
-        bytes32 aiSignature;
+contract TherapyConsent {
+    struct Consent {
+        bool aiInterventions;
+        bool emergencyContact;
+        bool dataSharing;
+        uint256 lastUpdated;
     }
-
-    mapping(uint256 => TherapySession) public sessions;
-    mapping(address => uint256[]) public patientSessions;
-    uint256 public latestSessionId;
-
-    event NewSessionStarted(uint256 indexed sessionId, address indexed patient);
-    event EmergencyTriggered(uint256 indexed sessionId, address indexed patient);
-    event SessionCompleted(uint256 indexed sessionId, bytes32 aiSignature);
-
-    function startNewSession(string memory initialMessage) external returns (TherapySession memory) {
-        TherapySession memory newSession = TherapySession({
-            patient: msg.sender,
-            encryptedConversation: initialMessage,
-            sessionStartBlock: uint32(block.number),
-            isEmergency: false,
-            aiSignature: bytes32(0)
-        });
-
-        sessions[latestSessionId] = newSession;
-        patientSessions[msg.sender].push(latestSessionId);
-
-        emit NewSessionStarted(latestSessionId, msg.sender);
-        latestSessionId++;
-
-        return newSession;
+    
+    struct AuditLog {
+        string interventionType;
+        uint256 timestamp;
+        string outcome;
     }
-
-    function updateSession(
-        uint256 sessionId,
-        string memory updatedConversation,
-        bytes memory operatorSignature
+    
+    mapping(address => Consent) public userConsent;
+    mapping(address => AuditLog[]) public userAuditLogs;
+    
+    event ConsentUpdated(address indexed user, string consentType, bool value);
+    event InterventionLogged(address indexed user, string interventionType, string outcome);
+    
+    modifier onlyAuthorized(address user) {
+        require(msg.sender == user, "Unauthorized");
+        _;
+    }
+    
+    function updateConsent(
+        bool _aiInterventions,
+        bool _emergencyContact,
+        bool _dataSharing
     ) external {
-        TherapySession storage session = sessions[sessionId];
-        require(session.patient != address(0), "Session does not exist");
+        userConsent[msg.sender] = Consent({
+            aiInterventions: _aiInterventions,
+            emergencyContact: _emergencyContact,
+            dataSharing: _dataSharing,
+            lastUpdated: block.timestamp
+        });
         
-        // Verify operator signature
-        bytes32 messageHash = keccak256(abi.encodePacked(sessionId, updatedConversation));
-        bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
-        
-        bytes4 magicValue = IERC1271Upgradeable.isValidSignature.selector;
-        require(
-            magicValue == ECDSAStakeRegistry(stakeRegistry).isValidSignature(ethSignedMessageHash, operatorSignature),
-            "Invalid operator signature"
-        );
-
-        session.encryptedConversation = updatedConversation;
+        emit ConsentUpdated(msg.sender, "ai_interventions", _aiInterventions);
+        emit ConsentUpdated(msg.sender, "emergency_contact", _emergencyContact);
+        emit ConsentUpdated(msg.sender, "data_sharing", _dataSharing);
     }
-
-    function triggerEmergency(uint256 sessionId) external {
-        TherapySession storage session = sessions[sessionId];
-        require(session.patient == msg.sender, "Not session owner");
+    
+    function logIntervention(
+        address user,
+        string memory interventionType,
+        string memory outcome
+    ) external onlyAuthorized(user) {
+        require(userConsent[user].aiInterventions, "AI interventions not authorized");
         
-        session.isEmergency = true;
-        emit EmergencyTriggered(sessionId, msg.sender);
+        userAuditLogs[user].push(AuditLog({
+            interventionType: interventionType,
+            timestamp: block.timestamp,
+            outcome: outcome
+        }));
+        
+        emit InterventionLogged(user, interventionType, outcome);
     }
-} 
-
-
-
+    
+    function getConsent(address user) external view returns (Consent memory) {
+        return userConsent[user];
+    }
+    
+    function getAuditLogs(address user) external view returns (AuditLog[] memory) {
+        return userAuditLogs[user];
+    }
+}
