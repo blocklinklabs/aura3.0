@@ -235,9 +235,10 @@ export default function TherapyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!message.trim() || isTyping || !user?.id || isChatPaused) return;
+    const currentMessage = message.trim();
+    if (!currentMessage || isTyping || !user?.id || isChatPaused) return;
 
-    const userMessage = message.trim();
+    // Clear the input immediately
     setMessage("");
     setIsTyping(true);
 
@@ -245,7 +246,7 @@ export default function TherapyPage() {
       // Save user message
       const savedUserMsg = await saveChatMessage({
         userId: user.id,
-        message: userMessage,
+        message: currentMessage,
         role: "user",
         context: { sessionId: params.sessionId },
       });
@@ -255,23 +256,23 @@ export default function TherapyPage() {
         {
           id: savedUserMsg[0].id,
           role: "user",
-          content: userMessage,
+          content: currentMessage,
           timestamp: new Date(),
         },
       ]);
 
       // Check for stress signals first
-      const stressCheck = detectStressSignals(userMessage);
+      const stressCheck = detectStressSignals(currentMessage);
       if (stressCheck) {
         setStressPrompt(stressCheck);
-        setIsTyping(false); // Stop typing indicator
-        return; // Don't proceed with AI response
+        setIsTyping(false);
+        return;
       }
 
       // Check for drug mentions (simplified example)
       const drugMentionRegex =
         /\b(aspirin|tylenol|advil|xanax|prozac|paracetamol|ibuprofen|acetaminophen|codeine|morphine|amoxicillin|penicillin)\b/gi;
-      const drugMatch = userMessage.match(drugMentionRegex);
+      const drugMatch = currentMessage.match(drugMentionRegex);
 
       if (drugMatch) {
         setDrugPrompt({
@@ -281,28 +282,15 @@ export default function TherapyPage() {
       }
 
       // Update session info with the message
-      await updateSessionInfo(userMessage);
+      await updateSessionInfo(currentMessage);
 
-      // Make API call to AI service
-
-      const messageData = { message: userMessage };
-
-      if (
-        !process.env.NEXT_PUBLIC_AI_CHAT_API_URL ||
-        !process.env.NEXT_PUBLIC_AI_CREDENTIALS_AUTONOME
-      ) {
-        throw new Error("AI configuration is missing");
-      }
-
-      const response = await fetch(process.env.NEXT_PUBLIC_AI_CHAT_API_URL, {
+      // Make API call to Gemini AI service
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Basic ${btoa(
-            process.env.NEXT_PUBLIC_AI_CREDENTIALS_AUTONOME
-          )}`,
         },
-        body: JSON.stringify(messageData),
+        body: JSON.stringify({ message: currentMessage }),
       });
 
       if (!response.ok) {
@@ -310,15 +298,7 @@ export default function TherapyPage() {
       }
 
       const data = await response.json();
-      let aiMessage: string;
-
-      if (data.response && Array.isArray(data.response)) {
-        aiMessage = data.response.join(" ");
-      } else {
-        throw new Error("Unexpected response format");
-      }
-
-      // console.log("aiMessage", aiMessage);
+      const aiMessage = data.response;
 
       // Save AI response to database
       const savedAiMsg = await saveChatMessage({
@@ -353,6 +333,7 @@ export default function TherapyPage() {
           timestamp: new Date(),
         },
       ]);
+      setIsTyping(false);
     }
   };
 
@@ -509,6 +490,18 @@ export default function TherapyPage() {
     setIsChatPaused(false);
   };
 
+  // Add this new function to handle suggested questions
+  const handleSuggestedQuestion = (text: string) => {
+    // First set the message
+    setMessage(text);
+
+    // Use setTimeout to ensure the message state is updated before submitting
+    setTimeout(() => {
+      const event = new Event("submit") as unknown as React.FormEvent;
+      handleSubmit(event);
+    }, 0);
+  };
+
   return (
     <div className="relative max-w-6xl mx-auto px-4">
       <div className="flex h-[calc(100vh-4rem)] mt-20">
@@ -571,7 +564,7 @@ export default function TherapyPage() {
                       <Button
                         variant="outline"
                         className="w-full h-auto py-4 px-6 text-left justify-start hover:bg-muted/50 hover:border-primary/50 transition-all duration-300"
-                        onClick={() => sendMessage(q.text)}
+                        onClick={() => handleSuggestedQuestion(q.text)}
                       >
                         {q.text}
                       </Button>

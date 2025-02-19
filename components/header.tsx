@@ -36,9 +36,14 @@ export function Header() {
             className="flex items-center space-x-2 transition-opacity hover:opacity-80"
           >
             <AudioWaveform className="h-7 w-7 text-primary animate-pulse-gentle" />
-            <span className="font-semibold text-lg bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-              Aura3.0
-            </span>
+            <div className="flex flex-col">
+              <span className="font-semibold text-lg bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                Aura3.0
+              </span>
+              <span className="text-xs dark:text-muted-foreground">
+                sonic DeFAI hackathon
+              </span>
+            </div>
           </Link>
 
           <div className="flex items-center gap-4">
