@@ -1,10 +1,8 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 
-// Replace file reading with environment variable
-const privateKey = process.env.WALLET_PRIVATE_KEY_BASE;
+const privateKey = process.env.WALLET_PRIVATE_KEY_SONIC_BLAZE_TESTNET;
 
-/** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   defaultNetwork: "sepolia",
   networks: {
@@ -12,8 +10,8 @@ module.exports = {
       chainId: 4202,
     },
 
-    baseSepolia: {
-      url: "https://sepolia.base.org",
+    sonic_blaze_testnet: {
+      url: "https://rpc.blaze.soniclabs.com",
       accounts: [privateKey],
     },
   },
