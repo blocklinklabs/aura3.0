@@ -116,7 +116,9 @@ export const createTherapySession = async (
       signer
     );
 
-    const sessionId = ethers.id(Date.now().toString());
+    // Generate a numeric session ID
+    const sessionId = BigInt(Date.now());
+
     const tx = await contract.createTherapySession(
       await signer.getAddress(),
       sessionId,
@@ -124,7 +126,7 @@ export const createTherapySession = async (
     );
     await tx.wait();
 
-    return sessionId;
+    return sessionId.toString();
   } catch (error) {
     console.error("Error creating therapy session:", error);
     throw error;
