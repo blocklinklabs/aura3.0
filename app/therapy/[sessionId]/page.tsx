@@ -15,6 +15,8 @@ import {
   Medal,
   Trophy,
   Star,
+  Clock,
+  Smile,
 } from "lucide-react";
 import { SessionHistory } from "@/components/therapy/session-history";
 import { cn } from "@/lib/utils";
@@ -46,6 +48,7 @@ import { completeTherapySession } from "@/lib/contracts/therapy-actions";
 import Image from "next/image";
 import { Confetti } from "@/app/components/ui/confetti";
 import { ethers } from "ethers";
+import { Badge } from "@/components/ui/badge";
 
 interface Message {
   id: string;
@@ -1016,86 +1019,151 @@ export default function TherapyPage() {
       {showNFTCelebration.show && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <Confetti />
-          <div className="bg-gradient-to-br from-white via-white to-primary/5 dark:from-gray-900 dark:via-gray-900 dark:to-primary/20 rounded-2xl p-8 max-w-md w-full mx-4 relative overflow-hidden shadow-2xl">
-            {/* Decorative elements */}
-            <div className="absolute -top-24 left-1/2 -translate-x-1/2 scale-150">
-              <div className="relative">
-                <div className="absolute inset-0 animate-ping">
-                  <Star className="w-32 h-32 text-yellow-500/30" />
-                </div>
-                <Star className="w-32 h-32 text-yellow-500" />
+          <div className="bg-gradient-to-br from-white via-white to-primary/5 dark:from-gray-900 dark:via-gray-900 dark:to-primary/20 rounded-3xl p-8 max-w-sm w-full mx-4 relative overflow-hidden shadow-2xl">
+            {/* Animated background elements */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute w-full h-full animate-spin-slow">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-primary/10 rounded-full blur-2xl" />
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl" />
+              </div>
+              <div className="absolute w-full h-full animate-reverse-spin-slow">
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-32 h-32 bg-pink-500/10 rounded-full blur-2xl" />
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
               </div>
             </div>
 
-            <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-              <div className="absolute top-0 left-0 w-20 h-20 bg-primary/10 rounded-full -translate-x-1/2 -translate-y-1/2" />
-              <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/10 rounded-full translate-x-1/2 -translate-y-1/2" />
-              <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500/10 rounded-full -translate-x-1/2 translate-y-1/2" />
-              <div className="absolute bottom-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full translate-x-1/2 translate-y-1/2" />
-            </div>
-
-            <div className="text-center mt-16 relative">
-              <motion.div
-                initial={{ scale: 0.5, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.5 }}
-              >
-                <h3 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary via-yellow-500 to-primary bg-clip-text text-transparent">
-                  Congratulations! 🎉
-                </h3>
-                <p className="text-muted-foreground mb-8">
-                  You've earned a special NFT for completing your therapy
-                  session 🏆
-                </p>
-              </motion.div>
-
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-                className="relative aspect-square mb-8 rounded-xl overflow-hidden ring-4 ring-primary/20 shadow-xl"
-              >
-                <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-primary/10" />
-                <Image
-                  src={showNFTCelebration.imageUri.replace(
-                    "ipfs://",
-                    "https://gateway.pinata.cloud/ipfs/"
-                  )}
-                  alt="Session NFT"
-                  fill
-                  className="object-cover"
-                />
-              </motion.div>
-
-              <motion.div
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.4, duration: 0.5 }}
-                className="flex gap-3"
-              >
-                <Button
-                  variant="default"
-                  className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
-                  onClick={() => router.push("/therapy/nfts")}
+            <div className="relative">
+              {/* Sparkle effect */}
+              <div className="absolute -top-12 left-1/2 -translate-x-1/2">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
                 >
-                  <Medal className="w-4 h-4 mr-2" />
-                  View My NFTs ✨
-                </Button>
-                <Button
-                  variant="outline"
-                  className="flex-1 border-primary/20 hover:bg-primary/5"
-                  onClick={() => {
-                    setShowNFTCelebration({
-                      show: false,
-                      sessionId: "",
-                      imageUri: "",
-                    });
-                    router.push("/therapy");
-                  }}
+                  <Star className="w-24 h-24 text-yellow-500/30" />
+                </motion.div>
+              </div>
+
+              <div className="text-center space-y-6">
+                <motion.div
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="space-y-3"
                 >
-                  Start New Session 🌟
-                </Button>
-              </motion.div>
+                  <h3 className="text-2xl font-bold bg-gradient-to-r from-primary via-yellow-500 to-primary bg-clip-text text-transparent">
+                    Achievement Unlocked! ✨
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Your journey of growth has been immortalized
+                  </p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                  className="relative aspect-square rounded-2xl overflow-hidden ring-4 ring-primary/20 shadow-xl bg-gradient-to-br from-primary/5 via-transparent to-yellow-500/5"
+                >
+                  {(() => {
+                    // Calculate session duration from messages
+                    const startTime = messages[0]?.timestamp;
+                    const endTime = new Date();
+                    const sessionDuration = startTime
+                      ? Math.round(
+                          (endTime.getTime() - startTime.getTime()) / 60000
+                        )
+                      : 0;
+
+                    // Calculate mood score based on the last few messages
+                    const lastFewMessages = messages.slice(-5);
+                    const sessionMoodScore = 8; // This should be calculated based on sentiment analysis
+
+                    return (
+                      <>
+                        <div className="absolute inset-0 flex items-center justify-center text-6xl">
+                          {sessionDuration <= 5
+                            ? "🌱"
+                            : sessionDuration <= 15
+                            ? "🌿"
+                            : sessionDuration <= 30
+                            ? "🌳"
+                            : "🌺"}
+                        </div>
+                        <div className="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                          <p className="text-white text-sm font-medium">
+                            {sessionDuration <= 5
+                              ? "Quick Check-in"
+                              : sessionDuration <= 15
+                              ? "Growth Session"
+                              : sessionDuration <= 30
+                              ? "Deep Reflection"
+                              : "Transformative Journey"}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex items-center text-xs text-white/80">
+                              <Clock className="w-3 h-3 mr-1" />
+                              {sessionDuration} min
+                            </div>
+                            <div className="flex items-center text-xs text-white/80">
+                              <Smile className="w-3 h-3 mr-1" />
+                              Score: {sessionMoodScore}/10
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </motion.div>
+
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.4, duration: 0.5 }}
+                  className="space-y-3"
+                >
+                  <div className="flex gap-1.5 justify-center flex-wrap">
+                    {[
+                      "🎯 First Step",
+                      "�� Heart-to-Heart",
+                      "🪞 Self-Discovery",
+                    ].map((achievement, index) => (
+                      <Badge
+                        key={index}
+                        variant="outline"
+                        className="bg-primary/5 border-primary/20"
+                      >
+                        {achievement}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="default"
+                      className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+                      onClick={() => router.push("/therapy/nfts")}
+                    >
+                      <Medal className="w-4 h-4 mr-2" />
+                      View Collection
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 border-primary/20 hover:bg-primary/5"
+                      onClick={() => {
+                        setShowNFTCelebration({
+                          show: false,
+                          sessionId: "",
+                          imageUri: "",
+                        });
+                        router.push("/therapy");
+                      }}
+                    >
+                      Continue Journey
+                    </Button>
+                  </div>
+                </motion.div>
+              </div>
             </div>
           </div>
         </div>

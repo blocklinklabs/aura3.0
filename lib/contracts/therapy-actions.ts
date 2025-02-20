@@ -88,24 +88,84 @@ export const generateSessionImage = async (
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d")!;
   canvas.width = 800;
-  canvas.height = 600;
+  canvas.height = 800;
 
-  // Set background
-  ctx.fillStyle = "#f0f0f0";
+  // Set background gradient
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, "#f8f9fa");
+  gradient.addColorStop(1, "#e9ecef");
+  ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+  // Add decorative circles
+  ctx.beginPath();
+  ctx.arc(100, 100, 150, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(147, 51, 234, 0.1)"; // primary color with opacity
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(canvas.width - 100, canvas.height - 100, 120, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(249, 168, 212, 0.1)"; // pink with opacity
+  ctx.fill();
+
+  // Calculate emoji based on duration
+  const durationEmoji =
+    session.duration <= 5
+      ? "🌱"
+      : session.duration <= 15
+      ? "🌿"
+      : session.duration <= 30
+      ? "🌳"
+      : "🌺";
+
+  // Add large centered emoji
+  ctx.font = "180px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(durationEmoji, canvas.width / 2, canvas.height / 2 - 40);
+
+  // Add session type text
+  const sessionType =
+    session.duration <= 5
+      ? "Quick Check-in"
+      : session.duration <= 15
+      ? "Growth Session"
+      : session.duration <= 30
+      ? "Deep Reflection"
+      : "Transformative Journey";
+
+  ctx.font = "bold 36px Inter";
+  ctx.fillStyle = "#6b21a8"; // primary dark
+  ctx.fillText(sessionType, canvas.width / 2, canvas.height / 2 + 100);
+
   // Add session details
-  ctx.fillStyle = "#000000";
-  ctx.font = "24px Arial";
-  ctx.fillText(`Therapy Session #${session.sessionId}`, 40, 40);
-  ctx.fillText(`Mood Score: ${session.moodScore}/10`, 40, 80);
-  ctx.fillText(`Duration: ${session.duration} minutes`, 40, 120);
+  ctx.font = "24px Inter";
+  ctx.fillStyle = "#64748b"; // muted foreground
+  ctx.fillText(
+    `Duration: ${session.duration} minutes ⏱️`,
+    canvas.width / 2,
+    canvas.height / 2 + 160
+  );
+  ctx.fillText(
+    `Mood Score: ${session.moodScore}/10 ${
+      session.moodScore >= 7 ? "😊" : "😌"
+    }`,
+    canvas.width / 2,
+    canvas.height / 2 + 200
+  );
 
   // Add achievements
-  ctx.fillText("Achievements:", 40, 180);
-  session.achievements.forEach((achievement, index) => {
-    ctx.fillText(`• ${achievement}`, 60, 220 + index * 40);
-  });
+  if (session.achievements.length > 0) {
+    ctx.font = "20px Inter";
+    ctx.fillText("Achievements:", canvas.width / 2, canvas.height / 2 + 260);
+    session.achievements.forEach((achievement, index) => {
+      ctx.fillText(
+        achievement,
+        canvas.width / 2,
+        canvas.height / 2 + 300 + index * 30
+      );
+    });
+  }
 
   // Convert canvas to file
   const blob = await new Promise<Blob>((resolve) =>
