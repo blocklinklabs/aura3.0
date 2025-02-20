@@ -2,6 +2,9 @@ import { ethers } from "ethers";
 // import TherapyConsent from "../../artifacts/contracts/TherapyConsent.sol/TherapyConsent.json";
 import TherapyConsent from "../../artifacts/contracts/TherapyConsent.sol/TherapyConsent.json";
 import { PinataSDK } from "pinata-web3";
+import { eq } from "drizzle-orm";
+import { therapySessions } from "@/lib/db/schema";
+import { db } from "@/lib/db/dbConfig";
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_THERAPY_CONSENT_ADDRESS;
 
@@ -116,54 +119,144 @@ export const createTherapySession = async (
       signer
     );
 
-    // Generate a numeric session ID
-    const sessionId = BigInt(Date.now());
+    // Generate a numeric session ID using timestamp and random component
+    const timestamp = BigInt(Date.now());
+    const random = BigInt(Math.floor(Math.random() * 1000));
+    const sessionId = timestamp * BigInt(1000) + random;
 
+    // Create database session first to get UUID
+    const dbSession = await db
+      .insert(therapySessions)
+      .values({
+        userId: await signer.getAddress(),
+        type: "text",
+        status: "in_progress",
+        scheduledTime: new Date(),
+        title: `New Session - ${new Date().toLocaleString()}`,
+      })
+      .returning();
+
+    const uuid = dbSession[0].id;
+
+    console.log("Creating session with numeric ID and UUID:", {
+      numericId: sessionId.toString(),
+      uuid,
+    });
+
+    // Create session in smart contract with both IDs
     const tx = await contract.createTherapySession(
       await signer.getAddress(),
       sessionId,
+      uuid,
       topics
     );
     await tx.wait();
 
-    return sessionId.toString();
+    return uuid;
   } catch (error) {
     console.error("Error creating therapy session:", error);
-    throw error;
+    throw new Error(
+      `Failed to create therapy session: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
   }
 };
 
-export const completeTherapySession = async (
+export async function completeTherapySession(
   signer: ethers.Signer,
   sessionId: string,
   summary: string,
   duration: number,
   moodScore: number,
   achievements: string[]
-) => {
+) {
   try {
+    console.log("Starting session completion with UUID:", sessionId);
+
     const contract = new ethers.Contract(
       CONTRACT_ADDRESS!,
       TherapyConsent.abi,
       signer
     );
 
-    // Convert sessionId to BigInt
-    const sessionBigInt = BigInt(parseInt(sessionId.replace(/\D/g, "")));
+    // Create session in contract if it doesn't exist
+    const timestamp = BigInt(Date.now());
+    const random = BigInt(Math.floor(Math.random() * 1000));
+    const newNumericId = timestamp * BigInt(1000) + random;
 
-    // First complete the session
-    const completeTx = await contract.completeTherapySession(
-      sessionBigInt,
+    console.log(
+      "Creating session in contract with numeric ID:",
+      newNumericId.toString()
+    );
+
+    let numericId = newNumericId;
+    try {
+      const createTx = await contract.createTherapySession(
+        await signer.getAddress(),
+        newNumericId,
+        sessionId,
+        [] // empty topics
+      );
+      const createReceipt = await createTx.wait();
+      const createEvent = createReceipt.events?.find(
+        (e: any) => e.event === "TherapySessionCreated"
+      );
+      if (createEvent) {
+        numericId = createEvent.args.sessionId;
+        console.log(
+          "Session created in contract with ID:",
+          numericId.toString()
+        );
+      }
+    } catch (error) {
+      console.log(
+        "Session might already exist in contract, continuing...",
+        error
+      );
+    }
+
+    // First update the session in the database
+    await db
+      .update(therapySessions)
+      .set({
+        status: "completed",
+        summary,
+        updatedAt: new Date(),
+      })
+      .where(eq(therapySessions.id, sessionId))
+      .returning();
+
+    console.log("Database updated, completing session in contract...");
+
+    // Complete the session in the smart contract
+    const tx = await contract.completeTherapySession(
+      sessionId,
       summary,
       duration,
       moodScore,
       achievements
     );
-    await completeTx.wait();
+
+    console.log("Waiting for transaction confirmation...");
+    const receipt = await tx.wait();
+
+    console.log("Transaction confirmed, events:", receipt.events);
+
+    // Try to find the completion event
+    const event = receipt.events?.find(
+      (e: any) => e.event === "TherapySessionCompleted"
+    );
+
+    // If no event, use the numeric ID we got from creation
+    const sessionNumericId = event?.args.sessionId || numericId;
+    console.log("Using session numeric ID:", sessionNumericId.toString());
+
+    console.log("Session completed, generating NFT...");
 
     // Generate and upload session image
     const image = await generateSessionImage({
-      sessionId,
+      sessionId: sessionNumericId.toString(),
       timestamp: Date.now(),
       summary,
       topics: [],
@@ -172,13 +265,15 @@ export const completeTherapySession = async (
       achievements,
       completed: true,
     });
-    const imageUri = await uploadSessionImage(
-      Buffer.from(await image.arrayBuffer())
-    );
+
+    const imageBuffer = Buffer.from(await image.arrayBuffer());
+    const imageUri = await uploadSessionImage(imageBuffer);
+
+    console.log("Image uploaded to IPFS:", imageUri);
 
     // Create and upload metadata
     const metadata = {
-      name: `Therapy Session #${sessionId}`,
+      name: `Therapy Session #${sessionNumericId.toString()}`,
       description: summary,
       image: `ipfs://${imageUri}`,
       attributes: [
@@ -198,13 +293,15 @@ export const completeTherapySession = async (
     };
 
     const metadataUri = await uploadSessionMetadata(metadata);
+    console.log("Metadata uploaded to IPFS:", metadataUri);
 
-    // Mint NFT
+    // Mint the NFT
+    console.log("Minting NFT...");
     const mintTx = await contract.mintSessionNFT(
       await signer.getAddress(),
       metadataUri,
       {
-        sessionId: sessionBigInt,
+        sessionId: sessionNumericId,
         timestamp: Math.floor(Date.now() / 1000),
         summary,
         topics: [],
@@ -215,50 +312,129 @@ export const completeTherapySession = async (
       }
     );
 
-    await mintTx.wait();
+    const mintReceipt = await mintTx.wait();
+    console.log("NFT minted successfully");
+
+    // Get the NFT minting event
+    const mintEvent = mintReceipt.events?.find(
+      (e: any) => e.event === "SessionNFTMinted"
+    );
 
     return {
-      sessionId,
+      sessionId: sessionNumericId.toString(),
+      uuid: sessionId,
       imageUri: `ipfs://${imageUri}`,
       metadataUri: `ipfs://${metadataUri}`,
+      tokenId: mintEvent?.args.tokenId?.toString(),
     };
   } catch (error) {
     console.error("Error completing therapy session:", error);
-    throw error;
+    throw new Error(
+      `Failed to complete therapy session: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
   }
-};
+}
+
+// Add helper function to get numeric ID from UUID
+export async function getNumericIdFromUUID(
+  provider: ethers.Provider,
+  uuid: string
+): Promise<string> {
+  const contract = new ethers.Contract(
+    CONTRACT_ADDRESS!,
+    TherapyConsent.abi,
+    provider
+  );
+  const numericId = await contract.getNumericId(uuid);
+  return numericId.toString();
+}
+
+// Add helper function to get UUID from numeric ID
+export async function getUUIDFromNumericId(
+  provider: ethers.Provider,
+  numericId: string
+): Promise<string> {
+  const contract = new ethers.Contract(
+    CONTRACT_ADDRESS!,
+    TherapyConsent.abi,
+    provider
+  );
+  return await contract.getUuid(numericId);
+}
 
 export const getUserSessions = async (
   provider: ethers.Provider,
   userAddress: string
 ) => {
   try {
+    console.log("Getting sessions for address:", userAddress);
+    console.log("Using contract address:", CONTRACT_ADDRESS);
+
     const contract = new ethers.Contract(
-      process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "",
+      CONTRACT_ADDRESS!,
       TherapyConsent.abi,
       provider
     );
 
-    const sessions = await contract.getUserSessions(userAddress);
-    const detailedSessions = await Promise.all(
-      sessions.map(async (details: any) => {
-        const tokenUri = details.metadataUri;
+    // First get the balance of NFTs for the user
+    const balance = await contract.balanceOf(userAddress);
+    console.log("User NFT balance:", balance.toString());
+
+    if (balance.toString() === "0") {
+      console.log("User has no NFTs");
+      return [];
+    }
+
+    // Get all NFTs owned by the user
+    const sessions = [];
+    for (let i = 0; i < balance.toNumber(); i++) {
+      try {
+        // Get token ID for each NFT
+        const tokenId = await contract.tokenOfOwnerByIndex(userAddress, i);
+        console.log("Found token ID:", tokenId.toString());
+
+        // Get token URI
+        const tokenUri = await contract.tokenURI(tokenId);
+        console.log("Token URI:", tokenUri);
+
+        // Get session details
+        const sessionDetails = await contract.getSessionDetails(tokenId);
+        console.log("Session details:", sessionDetails);
+
+        // Fetch metadata from IPFS
         const metadataResponse = await fetch(
           `https://gateway.pinata.cloud/ipfs/${tokenUri.replace("ipfs://", "")}`
         );
         const metadata = await metadataResponse.json();
+        console.log("Metadata:", metadata);
 
-        return {
-          ...details,
-          metadata,
-        };
-      })
-    );
+        sessions.push({
+          sessionId: tokenId.toString(),
+          imageUri: metadata.image,
+          metadata: {
+            name: metadata.name,
+            description: metadata.description,
+            attributes: metadata.attributes,
+          },
+        });
+      } catch (error) {
+        console.error("Error fetching NFT details:", error);
+        // Continue to next NFT if one fails
+        continue;
+      }
+    }
 
-    return detailedSessions;
+    console.log("Found sessions:", sessions);
+    return sessions;
   } catch (error) {
     console.error("Error getting user sessions:", error);
-    throw error;
+    throw new Error(
+      `Failed to get user sessions: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
   }
 };
 

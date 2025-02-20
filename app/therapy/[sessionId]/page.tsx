@@ -532,6 +532,9 @@ export default function TherapyPage() {
 
     setIsCompletingSession(true);
     try {
+      // Log the session ID for debugging
+      console.log("Session ID from params:", params.sessionId);
+
       // Get session summary from messages
       const userMessages = messages
         .filter((m) => m.role === "user")
@@ -563,10 +566,15 @@ export default function TherapyPage() {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
+      // Extract numeric session ID from params
+      const sessionIdStr = Array.isArray(params.sessionId)
+        ? params.sessionId[0]
+        : params.sessionId;
+
       // Complete the session and mint NFT
       const result = await completeTherapySession(
         signer,
-        params.sessionId as string,
+        sessionIdStr,
         summary,
         duration,
         moodScore,
@@ -581,6 +589,7 @@ export default function TherapyPage() {
       });
     } catch (error) {
       console.error("Error completing session:", error);
+      // TODO: Show error message to user
     } finally {
       setIsCompletingSession(false);
     }

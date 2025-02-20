@@ -29,3 +29,5 @@ module.exports = {
   throwOnCallFailures: true,
   loggingEnabled: true,
 };
+
+// npx hardhat ignition deploy ./ignition/modules/TherapyConsent.js --network sonic_blaze_testnet
