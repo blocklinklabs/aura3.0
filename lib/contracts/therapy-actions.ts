@@ -15,6 +15,14 @@ const pinata = new PinataSDK({
     process.env.NEXT_PUBLIC_PINATA_GATEWAY || "gateway.pinata.cloud",
 });
 
+// Add this helper function to validate contract address
+const validateContractAddress = () => {
+  if (!CONTRACT_ADDRESS) {
+    throw new Error("Contract address not found in environment variables");
+  }
+  return CONTRACT_ADDRESS;
+};
+
 export interface TherapySession {
   sessionId: string;
   timestamp: number;
@@ -114,7 +122,7 @@ export const createTherapySession = async (
 ) => {
   try {
     const contract = new ethers.Contract(
-      CONTRACT_ADDRESS!,
+      validateContractAddress(),
       TherapyConsent.abi,
       signer
     );
@@ -175,7 +183,7 @@ export async function completeTherapySession(
     console.log("Starting session completion with UUID:", sessionId);
 
     const contract = new ethers.Contract(
-      CONTRACT_ADDRESS!,
+      validateContractAddress(),
       TherapyConsent.abi,
       signer
     );
@@ -343,7 +351,7 @@ export async function getNumericIdFromUUID(
   uuid: string
 ): Promise<string> {
   const contract = new ethers.Contract(
-    CONTRACT_ADDRESS!,
+    validateContractAddress(),
     TherapyConsent.abi,
     provider
   );
@@ -357,7 +365,7 @@ export async function getUUIDFromNumericId(
   numericId: string
 ): Promise<string> {
   const contract = new ethers.Contract(
-    CONTRACT_ADDRESS!,
+    validateContractAddress(),
     TherapyConsent.abi,
     provider
   );
@@ -370,64 +378,79 @@ export const getUserSessions = async (
 ) => {
   try {
     console.log("Getting sessions for address:", userAddress);
-    console.log("Using contract address:", CONTRACT_ADDRESS);
+    const contractAddress = validateContractAddress();
+    console.log("Using contract address:", contractAddress);
 
     const contract = new ethers.Contract(
-      CONTRACT_ADDRESS!,
+      contractAddress,
       TherapyConsent.abi,
       provider
     );
 
-    // First get the balance of NFTs for the user
+    // First try to get the user's token balance
     const balance = await contract.balanceOf(userAddress);
-    console.log("User NFT balance:", balance.toString());
+    console.log("User token balance:", balance.toString());
 
-    if (balance.toString() === "0") {
+    if (balance === BigInt(0)) {
       console.log("User has no NFTs");
       return [];
     }
 
-    // Get all NFTs owned by the user
-    const sessions = [];
-    for (let i = 0; i < balance.toNumber(); i++) {
-      try {
-        // Get token ID for each NFT
-        const tokenId = await contract.tokenOfOwnerByIndex(userAddress, i);
-        console.log("Found token ID:", tokenId.toString());
+    // Get all tokens owned by the user using tokensOfOwner
+    const tokens = await contract.tokensOfOwner(userAddress);
+    console.log("User tokens:", tokens);
 
-        // Get token URI
-        const tokenUri = await contract.tokenURI(tokenId);
-        console.log("Token URI:", tokenUri);
+    // Get details for each token
+    const sessions = await Promise.all(
+      tokens.map(async (tokenId: bigint) => {
+        try {
+          console.log("Fetching details for token:", tokenId.toString());
 
-        // Get session details
-        const sessionDetails = await contract.getSessionDetails(tokenId);
-        console.log("Session details:", sessionDetails);
+          // Get token URI
+          const uri = await contract.tokenURI(tokenId);
+          console.log("Token URI:", uri);
 
-        // Fetch metadata from IPFS
-        const metadataResponse = await fetch(
-          `https://gateway.pinata.cloud/ipfs/${tokenUri.replace("ipfs://", "")}`
-        );
-        const metadata = await metadataResponse.json();
-        console.log("Metadata:", metadata);
+          // Get session details
+          const details = await contract.getSessionDetails(tokenId);
+          console.log("Session details:", details);
 
-        sessions.push({
-          sessionId: tokenId.toString(),
-          imageUri: metadata.image,
-          metadata: {
-            name: metadata.name,
-            description: metadata.description,
-            attributes: metadata.attributes,
-          },
-        });
-      } catch (error) {
-        console.error("Error fetching NFT details:", error);
-        // Continue to next NFT if one fails
-        continue;
-      }
-    }
+          // Fetch metadata from IPFS
+          const metadataResponse = await fetch(
+            `https://gateway.pinata.cloud/ipfs/${uri.replace("ipfs://", "")}`
+          );
 
-    console.log("Found sessions:", sessions);
-    return sessions;
+          if (!metadataResponse.ok) {
+            throw new Error(
+              `Failed to fetch metadata: ${metadataResponse.statusText}`
+            );
+          }
+
+          const metadata = await metadataResponse.json();
+          console.log("Metadata:", metadata);
+
+          return {
+            sessionId: tokenId.toString(),
+            imageUri: metadata.image,
+            metadata: {
+              name: metadata.name,
+              description: metadata.description,
+              attributes: metadata.attributes,
+            },
+          };
+        } catch (error) {
+          console.error(`Error fetching token ${tokenId} details:`, error);
+          return null;
+        }
+      })
+    );
+
+    // Filter out failed fetches
+    const validSessions = sessions.filter(
+      (s): s is NonNullable<typeof s> => s !== null
+    );
+    console.log("Valid sessions:", validSessions);
+
+    return validSessions;
   } catch (error) {
     console.error("Error getting user sessions:", error);
     throw new Error(

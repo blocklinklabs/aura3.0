@@ -97,6 +97,11 @@ interface NFTCelebration {
   imageUri: string;
 }
 
+interface SessionCompletedError {
+  show: boolean;
+  sessionId: string;
+}
+
 const suggestedQuestions: SuggestedQuestion[] = [
   { id: "1", text: "How can I manage my anxiety better?" },
   { id: "2", text: "I've been feeling overwhelmed lately" },
@@ -142,6 +147,11 @@ export default function TherapyPage() {
     imageUri: "",
   });
   const [isCompletingSession, setIsCompletingSession] = useState(false);
+  const [showSessionCompletedError, setShowSessionCompletedError] =
+    useState<SessionCompletedError>({
+      show: false,
+      sessionId: "",
+    });
 
   // Load chat history when session ID changes
   useEffect(() => {
@@ -532,9 +542,6 @@ export default function TherapyPage() {
 
     setIsCompletingSession(true);
     try {
-      // Log the session ID for debugging
-      console.log("Session ID from params:", params.sessionId);
-
       // Get session summary from messages
       const userMessages = messages
         .filter((m) => m.role === "user")
@@ -549,9 +556,9 @@ export default function TherapyPage() {
         : 0;
 
       // Calculate mood score (simplified example)
-      const moodScore = 8; // This should be calculated based on sentiment analysis
+      const moodScore = 8;
 
-      // Define achievements (this could be more sophisticated)
+      // Define achievements
       const achievements = [
         "Completed First Session",
         "Opened Up About Feelings",
@@ -589,7 +596,19 @@ export default function TherapyPage() {
       });
     } catch (error) {
       console.error("Error completing session:", error);
-      // TODO: Show error message to user
+
+      // Check if the error is about session already being completed
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("Session already completed")) {
+        setShowSessionCompletedError({
+          show: true,
+          sessionId: params.sessionId as string,
+        });
+      } else {
+        // Handle other errors
+        // TODO: Show error message to user
+      }
     } finally {
       setIsCompletingSession(false);
     }
@@ -997,23 +1016,46 @@ export default function TherapyPage() {
       {showNFTCelebration.show && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
           <Confetti />
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 relative">
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2">
+          <div className="bg-gradient-to-br from-white via-white to-primary/5 dark:from-gray-900 dark:via-gray-900 dark:to-primary/20 rounded-2xl p-8 max-w-md w-full mx-4 relative overflow-hidden shadow-2xl">
+            {/* Decorative elements */}
+            <div className="absolute -top-24 left-1/2 -translate-x-1/2 scale-150">
               <div className="relative">
                 <div className="absolute inset-0 animate-ping">
-                  <Star className="w-24 h-24 text-yellow-500 opacity-50" />
+                  <Star className="w-32 h-32 text-yellow-500/30" />
                 </div>
-                <Star className="w-24 h-24 text-yellow-500" />
+                <Star className="w-32 h-32 text-yellow-500" />
               </div>
             </div>
 
-            <div className="text-center mt-12">
-              <h3 className="text-2xl font-bold mb-2">Congratulations! 🎉</h3>
-              <p className="text-muted-foreground mb-6">
-                You've earned an NFT for completing your therapy session
-              </p>
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+              <div className="absolute top-0 left-0 w-20 h-20 bg-primary/10 rounded-full -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/10 rounded-full translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500/10 rounded-full -translate-x-1/2 translate-y-1/2" />
+              <div className="absolute bottom-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full translate-x-1/2 translate-y-1/2" />
+            </div>
 
-              <div className="relative aspect-square mb-6 rounded-lg overflow-hidden">
+            <div className="text-center mt-16 relative">
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                <h3 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary via-yellow-500 to-primary bg-clip-text text-transparent">
+                  Congratulations! 🎉
+                </h3>
+                <p className="text-muted-foreground mb-8">
+                  You've earned a special NFT for completing your therapy
+                  session 🏆
+                </p>
+              </motion.div>
+
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="relative aspect-square mb-8 rounded-xl overflow-hidden ring-4 ring-primary/20 shadow-xl"
+              >
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/10 via-transparent to-primary/10" />
                 <Image
                   src={showNFTCelebration.imageUri.replace(
                     "ipfs://",
@@ -1023,20 +1065,25 @@ export default function TherapyPage() {
                   fill
                   className="object-cover"
                 />
-              </div>
+              </motion.div>
 
-              <div className="flex gap-3">
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4, duration: 0.5 }}
+                className="flex gap-3"
+              >
                 <Button
                   variant="default"
-                  className="flex-1"
+                  className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
                   onClick={() => router.push("/therapy/nfts")}
                 >
                   <Medal className="w-4 h-4 mr-2" />
-                  View My NFTs
+                  View My NFTs ✨
                 </Button>
                 <Button
                   variant="outline"
-                  className="flex-1"
+                  className="flex-1 border-primary/20 hover:bg-primary/5"
                   onClick={() => {
                     setShowNFTCelebration({
                       show: false,
@@ -1046,9 +1093,69 @@ export default function TherapyPage() {
                     router.push("/therapy");
                   }}
                 >
-                  Start New Session
+                  Start New Session 🌟
                 </Button>
-              </div>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Session Already Completed Modal */}
+      {showSessionCompletedError.show && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gradient-to-br from-white via-white to-primary/5 dark:from-gray-900 dark:via-gray-900 dark:to-primary/20 rounded-2xl p-8 max-w-md w-full mx-4 relative overflow-hidden shadow-2xl">
+            <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+              <div className="absolute top-0 left-0 w-20 h-20 bg-primary/10 rounded-full -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/10 rounded-full translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500/10 rounded-full -translate-x-1/2 translate-y-1/2" />
+              <div className="absolute bottom-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full translate-x-1/2 translate-y-1/2" />
+            </div>
+
+            <div className="text-center relative">
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Trophy className="w-12 h-12 text-primary mx-auto mb-4" />
+                <h3 className="text-2xl font-bold mb-2 bg-gradient-to-r from-primary via-yellow-500 to-primary bg-clip-text text-transparent">
+                  Session Already Completed! 🎉
+                </h3>
+                <p className="text-muted-foreground mb-8">
+                  This therapy session has already been completed and an NFT has
+                  been minted. Would you like to view your NFT collection? ✨
+                </p>
+              </motion.div>
+
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.4, duration: 0.5 }}
+                className="flex gap-3"
+              >
+                <Button
+                  variant="default"
+                  className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+                  onClick={() => router.push("/therapy/nfts")}
+                >
+                  <Medal className="w-4 h-4 mr-2" />
+                  View My NFTs ✨
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 border-primary/20 hover:bg-primary/5"
+                  onClick={() => {
+                    setShowSessionCompletedError({
+                      show: false,
+                      sessionId: "",
+                    });
+                    router.push("/therapy");
+                  }}
+                >
+                  Start New Session 🌟
+                </Button>
+              </motion.div>
             </div>
           </div>
         </div>
