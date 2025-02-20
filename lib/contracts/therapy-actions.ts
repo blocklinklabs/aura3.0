@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+// import TherapyConsent from "../../artifacts/contracts/TherapyConsent.sol/TherapyConsent.json";
 import TherapyConsent from "../../artifacts/contracts/TherapyConsent.sol/TherapyConsent.json";
 import { PinataSDK } from "pinata-web3";
 
@@ -38,40 +39,32 @@ export interface SessionImage {
 }
 
 // Function to upload session image to IPFS
-export const uploadSessionImage = async (image: File): Promise<string> => {
+export const uploadSessionImage = async (image: Buffer): Promise<string> => {
   try {
-    const upload = await pinata.upload.file(image, {
-      pinataMetadata: {
-        name: `therapy-session-${Date.now()}`,
-      },
+    const file = new File([image], `therapy-session-${Date.now()}.png`, {
+      type: "image/png",
     });
 
-    return `ipfs://${upload.IpfsHash}`;
+    const upload = await pinata.upload.file(file);
+    return upload.IpfsHash;
   } catch (error) {
-    console.error("Error uploading image to IPFS:", error);
+    console.error("Error uploading session image:", error);
     throw error;
   }
 };
 
 // Function to upload session metadata to IPFS
-export const uploadSessionMetadata = async (
-  metadata: SessionMetadata
-): Promise<string> => {
+export const uploadSessionMetadata = async (metadata: any): Promise<string> => {
   try {
-    const metadataString = JSON.stringify(metadata);
-    const metadataFile = new File([metadataString], "metadata.json", {
+    const metadataBuffer = Buffer.from(JSON.stringify(metadata));
+    const file = new File([metadataBuffer], `metadata-${Date.now()}.json`, {
       type: "application/json",
     });
 
-    const upload = await pinata.upload.file(metadataFile, {
-      pinataMetadata: {
-        name: `therapy-session-metadata-${Date.now()}`,
-      },
-    });
-
-    return `ipfs://${upload.IpfsHash}`;
+    const upload = await pinata.upload.file(file);
+    return upload.IpfsHash;
   } catch (error) {
-    console.error("Error uploading metadata to IPFS:", error);
+    console.error("Error uploading session metadata:", error);
     throw error;
   }
 };
@@ -123,7 +116,7 @@ export const createTherapySession = async (
       signer
     );
 
-    const sessionId = ethers.utils.id(Date.now().toString());
+    const sessionId = ethers.id(Date.now().toString());
     const tx = await contract.createTherapySession(
       await signer.getAddress(),
       sessionId,
@@ -153,9 +146,12 @@ export const completeTherapySession = async (
       signer
     );
 
+    // Convert sessionId to BigInt
+    const sessionBigInt = BigInt(parseInt(sessionId.replace(/\D/g, "")));
+
     // First complete the session
     const completeTx = await contract.completeTherapySession(
-      sessionId,
+      sessionBigInt,
       summary,
       duration,
       moodScore,
@@ -164,7 +160,7 @@ export const completeTherapySession = async (
     await completeTx.wait();
 
     // Generate and upload session image
-    const sessionData = {
+    const image = await generateSessionImage({
       sessionId,
       timestamp: Date.now(),
       summary,
@@ -173,16 +169,16 @@ export const completeTherapySession = async (
       moodScore,
       achievements,
       completed: true,
-    };
+    });
+    const imageUri = await uploadSessionImage(
+      Buffer.from(await image.arrayBuffer())
+    );
 
-    const sessionImage = await generateSessionImage(sessionData);
-    const imageUri = await uploadSessionImage(sessionImage);
-
-    // Generate and upload metadata
-    const metadata: SessionMetadata = {
+    // Create and upload metadata
+    const metadata = {
       name: `Therapy Session #${sessionId}`,
-      description: `AI Therapy Session Summary: ${summary}`,
-      image: imageUri,
+      description: summary,
+      image: `ipfs://${imageUri}`,
       attributes: [
         {
           trait_type: "Duration",
@@ -196,10 +192,6 @@ export const completeTherapySession = async (
           trait_type: "Achievements",
           value: achievements.length,
         },
-        {
-          trait_type: "Date",
-          value: new Date().toISOString(),
-        },
       ],
     };
 
@@ -209,11 +201,25 @@ export const completeTherapySession = async (
     const mintTx = await contract.mintSessionNFT(
       await signer.getAddress(),
       metadataUri,
-      sessionData
+      {
+        sessionId: sessionBigInt,
+        timestamp: Math.floor(Date.now() / 1000),
+        summary,
+        topics: [],
+        duration,
+        moodScore,
+        achievements,
+        completed: true,
+      }
     );
+
     await mintTx.wait();
 
-    return { sessionId, imageUri, metadataUri };
+    return {
+      sessionId,
+      imageUri: `ipfs://${imageUri}`,
+      metadataUri: `ipfs://${metadataUri}`,
+    };
   } catch (error) {
     console.error("Error completing therapy session:", error);
     throw error;
@@ -221,25 +227,22 @@ export const completeTherapySession = async (
 };
 
 export const getUserSessions = async (
-  provider: ethers.providers.Provider,
+  provider: ethers.Provider,
   userAddress: string
 ) => {
   try {
     const contract = new ethers.Contract(
-      CONTRACT_ADDRESS!,
+      process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || "",
       TherapyConsent.abi,
       provider
     );
 
     const sessions = await contract.getUserSessions(userAddress);
-    return Promise.all(
-      sessions.map(async (sessionId: string) => {
-        const details = await contract.getSessionDetails(sessionId);
-        const tokenUri = await contract.tokenURI(sessionId);
-
-        // Fetch metadata from IPFS
-        const metadataResponse = await pinata.gateways.get(
-          tokenUri.replace("ipfs://", "")
+    const detailedSessions = await Promise.all(
+      sessions.map(async (details: any) => {
+        const tokenUri = details.metadataUri;
+        const metadataResponse = await fetch(
+          `https://gateway.pinata.cloud/ipfs/${tokenUri.replace("ipfs://", "")}`
         );
         const metadata = await metadataResponse.json();
 
@@ -249,6 +252,8 @@ export const getUserSessions = async (
         };
       })
     );
+
+    return detailedSessions;
   } catch (error) {
     console.error("Error getting user sessions:", error);
     throw error;
@@ -258,8 +263,11 @@ export const getUserSessions = async (
 // Function to get session image
 export const getSessionImage = async (imageUri: string): Promise<string> => {
   try {
-    const response = await pinata.gateways.get(imageUri.replace("ipfs://", ""));
-    return URL.createObjectURL(await response.blob());
+    const response = await fetch(
+      `https://gateway.pinata.cloud/ipfs/${imageUri.replace("ipfs://", "")}`
+    );
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
   } catch (error) {
     console.error("Error fetching session image:", error);
     throw error;

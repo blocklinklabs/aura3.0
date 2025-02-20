@@ -45,6 +45,7 @@ import { completeTherapySession } from "@/lib/contracts/therapy-actions";
 
 import Image from "next/image";
 import { Confetti } from "@/app/components/ui/confetti";
+import { ethers } from "ethers";
 
 interface Message {
   id: string;
@@ -558,9 +559,13 @@ export default function TherapyPage() {
         throw new Error("Please install a Web3 wallet to mint NFTs");
       }
 
+      // Get provider and signer
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
       // Complete the session and mint NFT
       const result = await completeTherapySession(
-        window.ethereum,
+        signer,
         params.sessionId as string,
         summary,
         duration,
