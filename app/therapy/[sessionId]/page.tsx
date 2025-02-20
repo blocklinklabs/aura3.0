@@ -12,6 +12,9 @@ import {
   X,
   XCircle,
   AlertCircle,
+  Medal,
+  Trophy,
+  Star,
 } from "lucide-react";
 import { SessionHistory } from "@/components/therapy/session-history";
 import { cn } from "@/lib/utils";
@@ -36,6 +39,12 @@ import { BreathingGame } from "@/components/games/breathing-game";
 import { ZenGarden } from "@/components/games/zen-garden";
 import { ForestGame } from "@/components/games/forest-game";
 import { OceanWaves } from "@/components/games/ocean-waves";
+import Link from "next/link";
+import { completeTherapySession } from "@/lib/contracts/therapy-actions";
+// import { Confetti } from "@/components/ui/confetti";
+
+import Image from "next/image";
+import { Confetti } from "@/app/components/ui/confetti";
 
 interface Message {
   id: string;
@@ -81,6 +90,12 @@ interface StressPrompt {
   };
 }
 
+interface NFTCelebration {
+  show: boolean;
+  sessionId: string;
+  imageUri: string;
+}
+
 const suggestedQuestions: SuggestedQuestion[] = [
   { id: "1", text: "How can I manage my anxiety better?" },
   { id: "2", text: "I've been feeling overwhelmed lately" },
@@ -102,6 +117,9 @@ const glowAnimation = {
   },
 };
 
+// Add this near the top of the file
+const COMPLETION_THRESHOLD = 5; // Minimum number of messages before allowing completion
+
 export default function TherapyPage() {
   const params = useParams();
   const router = useRouter();
@@ -117,6 +135,12 @@ export default function TherapyPage() {
   const [stressPrompt, setStressPrompt] = useState<StressPrompt | null>(null);
   const [showActivity, setShowActivity] = useState(false);
   const [isChatPaused, setIsChatPaused] = useState(false);
+  const [showNFTCelebration, setShowNFTCelebration] = useState<NFTCelebration>({
+    show: false,
+    sessionId: "",
+    imageUri: "",
+  });
+  const [isCompletingSession, setIsCompletingSession] = useState(false);
 
   // Load chat history when session ID changes
   useEffect(() => {
@@ -502,16 +526,98 @@ export default function TherapyPage() {
     }, 0);
   };
 
+  const handleCompleteSession = async () => {
+    if (!user?.id || !params.sessionId || isCompletingSession) return;
+
+    setIsCompletingSession(true);
+    try {
+      // Get session summary from messages
+      const userMessages = messages
+        .filter((m) => m.role === "user")
+        .map((m) => m.content);
+      const summary = userMessages.join(" ").substring(0, 200) + "...";
+
+      // Calculate session duration
+      const startTime = messages[0]?.timestamp;
+      const endTime = new Date();
+      const duration = startTime
+        ? Math.round((endTime.getTime() - startTime.getTime()) / 60000)
+        : 0;
+
+      // Calculate mood score (simplified example)
+      const moodScore = 8; // This should be calculated based on sentiment analysis
+
+      // Define achievements (this could be more sophisticated)
+      const achievements = [
+        "Completed First Session",
+        "Opened Up About Feelings",
+        "Practiced Self-Reflection",
+      ];
+
+      if (!window.ethereum) {
+        throw new Error("Please install a Web3 wallet to mint NFTs");
+      }
+
+      // Complete the session and mint NFT
+      const result = await completeTherapySession(
+        window.ethereum,
+        params.sessionId as string,
+        summary,
+        duration,
+        moodScore,
+        achievements
+      );
+
+      // Show NFT celebration
+      setShowNFTCelebration({
+        show: true,
+        sessionId: result.sessionId,
+        imageUri: result.imageUri,
+      });
+    } catch (error) {
+      console.error("Error completing session:", error);
+    } finally {
+      setIsCompletingSession(false);
+    }
+  };
+
   return (
     <div className="relative max-w-6xl mx-auto px-4">
       <div className="flex h-[calc(100vh-4rem)] mt-20">
         {/* Left sidebar */}
         <div className="w-[280px] border-r shrink-0">
           <SessionHistory onNewSession={createNewSession} />
+          <div className="p-4 border-t">
+            <Link href="/therapy/nfts">
+              <Button variant="outline" className="w-full">
+                <Medal className="w-4 h-4 mr-2" />
+                View Session NFTs
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Main chat area */}
         <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-background">
+          {/* Complete Session Button */}
+          {messages.length >= COMPLETION_THRESHOLD &&
+            !showNFTCelebration.show && (
+              <div className="absolute top-4 right-4 z-10">
+                <Button
+                  variant="outline"
+                  className="bg-white/50 backdrop-blur-sm hover:bg-white/75 border-primary/20"
+                  onClick={handleCompleteSession}
+                  disabled={isCompletingSession}
+                >
+                  <Trophy className="w-4 h-4 mr-2 text-primary" />
+                  Complete Session & Mint NFT
+                  {isCompletingSession && (
+                    <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                  )}
+                </Button>
+              </div>
+            )}
+
           {messages.length === 0 ? (
             // Welcome screen with suggested questions
             <div className="flex-1 flex items-center justify-center p-4">
@@ -869,6 +975,67 @@ export default function TherapyPage() {
               </Button>
             </div>
             {renderActivity(stressPrompt.activity.type)}
+          </div>
+        </div>
+      )}
+
+      {/* NFT Celebration Modal */}
+      {showNFTCelebration.show && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <Confetti />
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 relative">
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2">
+              <div className="relative">
+                <div className="absolute inset-0 animate-ping">
+                  <Star className="w-24 h-24 text-yellow-500 opacity-50" />
+                </div>
+                <Star className="w-24 h-24 text-yellow-500" />
+              </div>
+            </div>
+
+            <div className="text-center mt-12">
+              <h3 className="text-2xl font-bold mb-2">Congratulations! 🎉</h3>
+              <p className="text-muted-foreground mb-6">
+                You've earned an NFT for completing your therapy session
+              </p>
+
+              <div className="relative aspect-square mb-6 rounded-lg overflow-hidden">
+                <Image
+                  src={showNFTCelebration.imageUri.replace(
+                    "ipfs://",
+                    "https://gateway.pinata.cloud/ipfs/"
+                  )}
+                  alt="Session NFT"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  variant="default"
+                  className="flex-1"
+                  onClick={() => router.push("/therapy/nfts")}
+                >
+                  <Medal className="w-4 h-4 mr-2" />
+                  View My NFTs
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowNFTCelebration({
+                      show: false,
+                      sessionId: "",
+                      imageUri: "",
+                    });
+                    router.push("/therapy");
+                  }}
+                >
+                  Start New Session
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
