@@ -1,11 +1,10 @@
 # Aura3.0: AI-Powered Mental Health Support on Sonic 🧠⛓️
 
-[![Base](https://img.shields.io/badge/Base-L2-green.svg)]()
 [![Sonic Token](https://img.shields.io/badge/Sonic-Integration-purple.svg)]()
 [![Zerepy](https://img.shields.io/badge/Zerepy-AI_Agent-blue.svg)]()
 [![HIPAA](https://img.shields.io/badge/HIPAA-Compliant-green.svg)]()
 
-> An autonomous AI therapist powered by Zerepy agents, rewarding progress with Sonic tokens and therapy session NFTs on Base L2.
+> An autonomous AI therapist powered by Zerepy agents, rewarding progress with Sonic tokens and therapy session NFTs on Sonic Blaze Testnet.
 
 ## 🌟 Key Features
 
