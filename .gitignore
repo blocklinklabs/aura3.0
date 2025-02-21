@@ -61,7 +61,7 @@ push.sh
 /push.sh
 # Hardhat files
 /cache
-/artifacts
+
 
 # TypeChain files
 /typechain
