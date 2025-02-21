@@ -3,49 +3,67 @@
 [![Sonic Token](https://img.shields.io/badge/Sonic-Integration-purple.svg)]()
 [![Zerepy](https://img.shields.io/badge/Zerepy-AI_Agent-blue.svg)]()
 [![HIPAA](https://img.shields.io/badge/HIPAA-Compliant-green.svg)]()
+[![Crisis Response](https://img.shields.io/badge/Crisis-Detection-red.svg)]()
+[![Smart Contract](https://img.shields.io/badge/Sonic_Blaze-Testnet-orange.svg)]()
 
-> An autonomous AI therapist powered by Zerepy agents, rewarding progress with Sonic tokens and therapy session NFTs on Sonic Blaze Testnet.
+> An autonomous AI therapist powered by advanced NLP and emotional intelligence, providing personalized mental health support while ensuring privacy through blockchain technology. Built on Sonic Blaze Testnet with Zerepy agents.
 
 ## 🌟 Key Features
 
-### 🎨 Therapy Session NFTs
+### 🤖 Advanced AI Therapy System
 
-```solidity
-// Core NFT functionality
-contract TherapyConsent is IERC721 {
-    struct TherapySession {
-        uint256 sessionId;
-        uint256 timestamp;
-        string summary;
-        string[] topics;
-        uint256 duration;
-        uint8 moodScore;
-        string[] achievements;
-        bool completed;
-    }
+- **Zerepy Agent Integration**
+  - Advanced autonomous agent powered by state-of-the-art gpt-4
+  - Multi-agent coordination for comprehensive care
+  - Dynamic personality adaptation based on user needs
+  - Specialized therapeutic approaches and interventions
+  - Real-time crisis detection and emergency protocols
+  - Continuous learning and improvement system
 
-    function mintSessionNFT(
-        address user,
-        string memory tokenURI,
-        TherapySession memory sessionData
-    ) external returns (uint256);
-}
-```
+### 🎨 Blockchain-Secured Therapy Sessions
 
-- ERC-721 compliant therapy session NFTs
-- On-chain progress verification
-- Achievement tracking and milestones
-- Privacy-preserving metadata
-- HIPAA-compliant data handling
+- **Smart Contract Architecture**
 
-### 🤖 Zerepy AI Agent Integration
+  ```solidity
+  struct TherapySession {
+      uint256 sessionId;
+      uint256 timestamp;
+      string summary;
+      string[] topics;
+      uint256 duration;
+      uint8 moodScore;
+      string[] achievements;
+      bool completed;
+  }
+  ```
 
-- Autonomous therapeutic conversations
-- Context-aware emotional support
-- Crisis detection and response
-- Progress tracking and verification
-- Multi-agent coordination for comprehensive care
-- NFT minting triggers based on achievements
+- **HIPAA-Compliant Data Management**
+
+  - End-to-end encryption for all communications
+  - Zero-knowledge proofs for privacy
+  - Decentralized storage of session records
+  - Granular consent management system
+
+- **NFT-Based Progress Tracking**
+  - ERC-721 therapy session certificates
+  - Achievement-based milestone NFTs
+  - Privacy-preserving metadata structure
+  - Verifiable progress records
+
+### 🌈 Interactive Therapeutic Features
+
+- **Mindfulness Activities**
+
+  - Breathing exercises with visual guidance
+  - Digital Zen garden for stress relief
+  - Virtual forest walks
+  - Ocean wave meditation
+
+- **Smart Environment Integration**
+  - IoT device synchronization
+  - Ambient lighting control
+  - Therapeutic sound management
+  - Environmental adaptation to mood
 
 ### 💫 Sonic Token Integration
 
@@ -57,180 +75,154 @@ interface ISonicToken {
 }
 ```
 
-- Reward distribution for therapy milestones
-- Staking mechanisms for long-term engagement
-- Automated liquidity provisioning
-- Anti-Sybil mechanisms for fair rewards
+- **Tokenized Reward System**
+  - Achievement-based token distribution
+  - Engagement staking mechanisms
+  - Community participation rewards
+  - Progress milestone bonuses
 
-### 🔄 Social Progress Sharing
+## 🛠 Technical Implementation
 
-- Twitter integration for achievement sharing
-- NFT achievement showcasing
+### AI Agent Architecture
 
-## 🛠 Technical Stack
-
-### Smart Contract Deployed on ( Sonic Blaze Testnet)
-
-```solidity
-// Therapy session consent and NFT management
-struct Consent {
-    bool aiInterventions;
-    bool emergencyContact;
-    bool dataSharing;
-    uint256 lastUpdated;
-}
-
-struct AuditLog {
-    string interventionType;
-    uint256 timestamp;
-    string outcome;
+```typescript
+class TherapyAgentConfig {
+  name: string;
+  personality: string;
+  specialties: string[];
+  language_model: string = "gemini-1.5-flash";
+  temperature: float = 0.7;
+  therapy_approach: string;
+  crisis_protocol: Object;
 }
 ```
 
-- ERC-721 therapy session NFTs
-- Achievement tracking system
-- Consent management
-- Audit logging
-- Sonic token rewards (ERC-20)
+### Security Measures
 
-### AI/ML Components
+- **Blockchain Security**
 
-- LangChain for agent orchestration
-- Emotion detection models
-- Crisis prediction system
-- Progress tracking analytics
-- NFT metadata generation
+  - Smart contract auditing
+  - Multi-signature therapy session validation
+  - Encrypted on-chain storage
+  - Automated security monitoring
 
-## 🚀 Quick Start
+- **Data Protection**
+  - HIPAA-compliant encryption
+  - Secure key management
+  - Regular security audits
+  - Privacy-preserving analytics
 
-1. **Install Dependencies**
+### Crisis Detection System
 
-```bash
-git clone https://github.com/blocklinklabs/aura3.0.git
-cd aura3.0
-npm install
+```typescript
+const detectStressSignals = (message: string): StressPrompt | null => {
+  const stressKeywords = [
+    "stress",
+    "anxiety",
+    "worried",
+    "panic",
+    "overwhelmed",
+    "nervous",
+    "tense",
+    "pressure",
+  ];
+  // Advanced pattern matching and intervention logic
+};
 ```
+
+## 🚀 Getting Started
+
+1. **Clone & Install**
+
+   ```bash
+   git clone https://github.com/blocklinklabs/aura3.0.git
+   cd aura3.0
+   npm install
+   ```
 
 2. **Configure Environment**
 
-```bash
-cp .env.example .env
-# Add your keys:
-# - SONIC_PRIVATE_KEY
-# - ZEREPY_API_KEY
-# - SOCIAL_API_KEYS
-```
+   ```bash
+   cp .env.example .env
+   # Add required API keys:
+   # - SONIC_PRIVATE_KEY
+   # - GEMINI_API_KEY
+   # - ZEREPY_API_KEY
+   ```
 
-3. **Deploy Contracts**
+3. **Deploy Smart Contracts**
 
-```bash
-npx hardhat run scripts/deploy.ts --network sonic_blaze_testnet
-```
+   ```bash
+   npx hardhat run scripts/deploy.ts --network sonic_blaze_testnet
+   ```
 
 4. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
 
-```bash
-npm run dev
-```
+## 📈 Performance Metrics
 
-## 💡 Core Features
+- Response Time: <100ms
+- Emotion Detection Accuracy: 94.5%
+- Crisis Prediction Precision: 91.3%
+- Transaction Throughput: 2000 TPS
+- NFT Minting Time: ~15s
 
-### Therapy Session Flow
-
-1. User connects wallet and sets consent preferences
-2. AI agent initiates session with unique ID
-3. Progress and achievements tracked on-chain
-4. Session NFT minted upon completion
-5. Rewards distributed in Sonic tokens
-6. Achievements shared socially (optional)
-
-### NFT & Token Rewards
-
-```typescript
-// Mint therapy session NFT
-async function mintSessionNFT(session: TherapySession) {
-  // Generate metadata
-  const metadata = await generateNFTMetadata(session);
-
-  // Mint NFT
-  const tx = await therapyContract.mintSessionNFT(
-    session.user,
-    metadata.uri,
-    session
-  );
-
-  // Distribute Sonic rewards
-  await sonicContract.mint(session.user, calculateRewards(session));
-}
-```
-
-- Session completion NFTs
-- Achievement milestones
-- Community engagement rewards
-- Staking incentives
-- Privacy-preserving metadata
-
-### Social Integration
-
-```typescript
-// Share achievements with privacy
-async function shareProgress(progress: TherapyProgress) {
-  // Generate shareable achievement
-  const achievement = await createPrivacyPreservingAchievement(progress);
-
-  // Post to social platforms
-  await agent.perform_action(
-    (connection = "farcaster"),
-    (action = "post-progress"),
-    (params = [progress.session_id, achievement])
-  );
-}
-```
-
-## 🔒 Security & Privacy
+## 🔒 Security & Compliance
 
 - End-to-end encryption
 - HIPAA compliance
-- Opt-in social sharing
-- Anonymous achievements
-- Secure wallet integration
-- Privacy-preserving NFT metadata
-- Consent-based data sharing
+- GDPR compliance
+- Regular security audits
+- Penetration testing
+- Privacy-preserving architecture
+- Zero-knowledge proof implementation
+- Secure key management
+- Multi-factor authentication
+- Role-based access control
 
-## 📈 Performance
+## 🗺 Development Roadmap
 
-- Response time: <100ms
-- Emotion detection accuracy: 94.5%
-- Crisis prediction precision: 91.3%
-- Transaction throughput: 2000 TPS
-- NFT minting time: ~15s
+### Phase 1: Enhanced User Experience
 
-## 🗺 Roadmap
-
-### Q2 2025
-
-- Enhanced NFT metadata and visualization
+- Enhanced NFT visualization system
 - Advanced reward mechanisms
 - Mobile app release
 - NFT marketplace integration
+- Multi-language support
+- Advanced crisis intervention
+- Expanded IoT integration
+- Enhanced privacy features
 
-### Q3 2025
+### Phase 2: Platform Expansion
 
 - Group therapy features
-- DAO governance
+- DAO governance implementation
 - Cross-chain NFT bridging
 - Enhanced achievement system
+- AI model improvements
+- Community features
+- Advanced analytics
+- Expanded integrations
 
 ## 🤝 Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md)
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE)
 
+## 🌟 Acknowledgments
+
+- Sonic
+- Zerepy AI Framework
+- Mental Health Professionals
+- Open Source Community
+
 ---
 
 <p align="center">
-Built with ❤️ on Sonic Blaze Testnet and Zerepy 
+Built with ❤️ on Sonic Blaze Testnet and Zerepy for better mental health
 </p>
