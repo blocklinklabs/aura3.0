@@ -93,13 +93,6 @@ struct AuditLog {
 - Audit logging
 - Sonic token rewards (ERC-20)
 
-### Core Dependencies
-
-```bash
-node >= 18.0.0
-@zerepy/core >= 0.5.0
-```
-
 ### AI/ML Components
 
 - LangChain for agent orchestration
