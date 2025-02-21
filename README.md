@@ -97,7 +97,6 @@ struct AuditLog {
 
 ```bash
 node >= 18.0.0
-@base-org/contracts >= 1.0.0
 @zerepy/core >= 0.5.0
 ```
 
